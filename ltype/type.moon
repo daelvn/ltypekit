@@ -28,6 +28,12 @@ type = setmetatable {
       if val_type then return val_type
     val_type = type_ val
     return val_type or false
+
+  add_resolver: (resolver)        => table.insert @resolvers, resolver
+  add_allowed:  (allowed)         => table.insert @types,     allowed
+  add_type:     (resolver, typel) =>
+    table.insert @resolvers, resolver
+    for allowed in *typel do table.insert @types, allowed
 }, {
   __call: (val) => @.resolve val, @resolvers
 }

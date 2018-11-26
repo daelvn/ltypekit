@@ -1,10 +1,9 @@
 -- ltype | 23.11.2018
 -- By daelvn
 -- Wrap a function to use type signatures
-import binarize            from require "ltype.signature"
+import binarize, compare   from require "ltype.signature"
 import type                from require "ltype.type"
 import warn, die, contains from require "ltype.util"
-import printi, dart        from require "ltext"
 
 local signature, callable
 
@@ -34,7 +33,12 @@ callable = (f, sig, typef, safe, silent) -> setmetatable {
         if (@._type argl[i]) == "signed"
           if argl[i]._signature == @_tree.in[i]
             table.insert arg_i, argl[i]
-          else die "Wrong type for argument ##{i}. Expected (#{@_tree.in[i]}), got (#{argl[i]._signature})"
+          else
+            -- Could have * or !
+            if compare argl[i]._signature, @_tree.in[i]
+              table.insert arg_i, argl[i]
+            else
+              die "Wrong type for argument ##{i}. Expected (#{@_tree.in[i]}), got (#{argl[i]._signature})"
         else die "Wrong type for argument ##{i}. Expected a signed function, got #{@._type argl[i]}"
       elseif @_tree.in[i]\match "%*"
         -- Any type
@@ -44,7 +48,7 @@ callable = (f, sig, typef, safe, silent) -> setmetatable {
         if argl[i] != nil
           table.insert arg_i, argl[i]
         else
-          printi {:argn, :argl, :arg_i, :holders, tree: @_tree}
+          --printi {:argn, :argl, :arg_i, :holders, tree: @_tree}
           die "Wrong type for argument ##{i}. Expected any value, got nil"
       elseif contains @._type.types, @_tree.in[i]
         -- Recognized type
@@ -55,10 +59,10 @@ callable = (f, sig, typef, safe, silent) -> setmetatable {
       else
         -- Placeholder
         if holders[@_tree.in[i]]
-          if (holders[@_tree.out[i]] == @._type arg_m[i])
+          if (holders[@_tree.in[i]] == @._type argl[i])
             table.insert arg_i, argl[i]
           else
-            die "Wrong type for argument ##{i}. Expected #{holders[@_tree.out[i]]}, got #{@._type arg_m[i]}"
+            die "Wrong type for argument ##{i}. Expected #{holders[@_tree.in[i]]}, got #{@._type argl[i]}"
         else
           holders[@_tree.in[i]] = @._type argl[i]
           table.insert arg_i, argl[i]
@@ -129,4 +133,4 @@ signature = (sig) -> setmetatable {
   __call: (f)    => callable f, @_signature, @._type, @safe, @silent
 }
 
-{:signature, :safe}
+{:signature}

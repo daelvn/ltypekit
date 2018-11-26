@@ -1,16 +1,14 @@
-local binarize
-binarize = require("ltype.signature").binarize
+local binarize, compare
+do
+  local _obj_0 = require("ltype.signature")
+  binarize, compare = _obj_0.binarize, _obj_0.compare
+end
 local type
 type = require("ltype.type").type
 local warn, die, contains
 do
   local _obj_0 = require("ltype.util")
   warn, die, contains = _obj_0.warn, _obj_0.die, _obj_0.contains
-end
-local printi, dart
-do
-  local _obj_0 = require("ltext")
-  printi, dart = _obj_0.printi, _obj_0.dart
 end
 local signature, callable
 callable = function(f, sig, typef, safe, silent)
@@ -47,7 +45,11 @@ callable = function(f, sig, typef, safe, silent)
             if argl[i]._signature == self._tree["in"][i] then
               table.insert(arg_i, argl[i])
             else
-              die("Wrong type for argument #" .. tostring(i) .. ". Expected (" .. tostring(self._tree["in"][i]) .. "), got (" .. tostring(argl[i]._signature) .. ")")
+              if compare(argl[i]._signature, self._tree["in"][i]) then
+                table.insert(arg_i, argl[i])
+              else
+                die("Wrong type for argument #" .. tostring(i) .. ". Expected (" .. tostring(self._tree["in"][i]) .. "), got (" .. tostring(argl[i]._signature) .. ")")
+              end
             end
           else
             die("Wrong type for argument #" .. tostring(i) .. ". Expected a signed function, got " .. tostring(self._type(argl[i])))
@@ -58,13 +60,6 @@ callable = function(f, sig, typef, safe, silent)
           if argl[i] ~= nil then
             table.insert(arg_i, argl[i])
           else
-            printi({
-              argn = argn,
-              argl = argl,
-              arg_i = arg_i,
-              holders = holders,
-              tree = self._tree
-            })
             die("Wrong type for argument #" .. tostring(i) .. ". Expected any value, got nil")
           end
         elseif contains(self._type.types, self._tree["in"][i]) then
@@ -75,10 +70,10 @@ callable = function(f, sig, typef, safe, silent)
           end
         else
           if holders[self._tree["in"][i]] then
-            if (holders[self._tree.out[i]] == self._type(arg_m[i])) then
+            if (holders[self._tree["in"][i]] == self._type(argl[i])) then
               table.insert(arg_i, argl[i])
             else
-              die("Wrong type for argument #" .. tostring(i) .. ". Expected " .. tostring(holders[self._tree.out[i]]) .. ", got " .. tostring(self._type(arg_m[i])))
+              die("Wrong type for argument #" .. tostring(i) .. ". Expected " .. tostring(holders[self._tree["in"][i]]) .. ", got " .. tostring(self._type(argl[i])))
             end
           else
             holders[self._tree["in"][i]] = self._type(argl[i])
@@ -164,6 +159,5 @@ signature = function(sig)
   })
 end
 return {
-  signature = signature,
-  safe = safe
+  signature = signature
 }

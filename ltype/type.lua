@@ -42,6 +42,19 @@ local type = setmetatable({
     end
     local val_type = type_(val)
     return val_type or false
+  end,
+  add_resolver = function(self, resolver)
+    return table.insert(self.resolvers, resolver)
+  end,
+  add_allowed = function(self, allowed)
+    return table.insert(self.types, allowed)
+  end,
+  add_type = function(self, resolver, typel)
+    table.insert(self.resolvers, resolver)
+    for _index_0 = 1, #typel do
+      local allowed = typel[_index_0]
+      table.insert(self.types, allowed)
+    end
   end
 }, {
   __call = function(self, val)

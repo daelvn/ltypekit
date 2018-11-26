@@ -1,7 +1,7 @@
 -- ltypesign | 23.11.2018
 -- By daelvn
 -- Signature parsing
-import die from require "ltype.util"
+import die, warn from require "ltype.util"
 
 binarize = (sig) ->
   tree      = in: {}, out: {}
@@ -68,4 +68,50 @@ binarize = (sig) ->
   -- Return
   return tree
 
-{:binarize}
+rbinarize = (sig) ->
+  tree = binarize sig
+  for i=1,#tree.in
+    if tree.in[i]\match "%->" then tree.in[i] = rbinarize tree.in[i]
+  for i=1,#tree.out
+    if tree.out[i]\match "%->" then tree.in[i] = rbinarize tree.out[i]
+
+compare = (siga, sigb, _safe, _silent) ->
+  rbsiga = rbinarize siga
+  rbsigb = rbinarize sigb
+
+  warn_ = warn
+  warn  = (s) ->
+    if _safe       then die s
+    if not _silent then warn_ s
+
+  rcompare = (bsiga, bsigb)->
+    if #bsiga.in  != #bsigb.in  then return false
+    if #bsiga.out != #bsigb.out then return false
+    for i=1,#bsiga.in
+      if ((type bsiga.in[1]) == "table") and ((type bsigb.in[1]) == "table") then return rcompare bsiga.in, bsigb.in
+      if     bsiga.in[i] == bsigb.in[i] then continue
+      elseif bsiga.in[i] == "*"         then continue
+      elseif bsigb.in[i] == "*"         then continue
+      elseif bsiga.in[i] == "!"
+        if bsigb.in[i] == "*" then warn "comparing (#{siga}) and (#{sigb}). signature B might take nil"
+        continue
+      elseif bsigb.in[i] == "!"
+        if bsiga.in[i] == "*" then warn "comparing (#{siga}) and (#{sigb}). signature A might take nil"
+        continue
+      return false
+    for i=1,#bsiga.out
+      if ((type bsiga.out[1]) == "table") and ((type bsigb.out[1]) == "table") then return rcompare bsiga.out, bsigb.out
+      if     bsiga.out[i] == bsigb.out[i] then continue
+      elseif bsiga.out[i] == "*"         then continue
+      elseif bsigb.out[i] == "*"         then continue
+      elseif bsiga.out[i] == "!"
+        if bsigb.out[i] == "*" then warn "comparing (#{siga}) and (#{sigb}). signature B might return nil"
+        continue
+      elseif bsigb.out[i] == "!"
+        if bsiga.out[i] == "*" then warn "comparing (#{siga}) and (#{sigb}). signature A might return nil"
+        continue
+      return false
+    
+  rcompare rbsiga, rbsigb
+
+{:binarize, :rbinarize, :compare}
