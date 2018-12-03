@@ -61,7 +61,14 @@ describe "type signatures", ->
     concat_hi = (signature "string -> string") (a)    -> a.."hi"
     assert.are_equal "oh hi", apply concat_hi, "oh "
   it "uses !-types on signatures", ->
+    apply     = (signature "(! -> !), ! -> *") (f, a) -> f a
+    concat_hi = (signature "string -> string") (a)    -> a.."hi"
+    assert.are_equal "oh hi", apply concat_hi, "oh "
   it "uses placeholders", ->
+    apply     = (signature "(x -> y), x -> y") (f, a) -> f a
+    tonumber_ = (signature "(* -> number)")    (a)    -> tonumber a
+    assert.are_equal 5, apply tonumber
+    f = (signature ""
   it "uses custom types", ->
   it "discards extra arguments", ->
   it "checks for wrong values", ->

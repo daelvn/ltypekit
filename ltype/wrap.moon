@@ -35,7 +35,7 @@ callable = (f, sig, typef, safe, silent) -> setmetatable {
             table.insert arg_i, argl[i]
           else
             -- Could have * or !
-            if compare argl[i]._signature, @_tree.in[i]
+            if compare argl[i]._signature, @_tree.in[i], safe, silent
               table.insert arg_i, argl[i]
             else
               die "Wrong type for argument ##{i}. Expected (#{@_tree.in[i]}), got (#{argl[i]._signature})"

@@ -34,6 +34,10 @@ type = setmetatable {
   add_type:     (resolver, typel) =>
     table.insert @resolvers, resolver
     for allowed in *typel do table.insert @types, allowed
+
+  resolves: (type_) =>
+    with _ @resolvers
+      \contains type_
 }, {
   __call: (val) => @.resolve val, @resolvers
 }
