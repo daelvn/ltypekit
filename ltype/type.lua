@@ -55,6 +55,13 @@ local type = setmetatable({
       local allowed = typel[_index_0]
       table.insert(self.types, allowed)
     end
+  end,
+  resolves = function(self, type_)
+    do
+      local _with_0 = _(self.resolvers)
+      _with_0:contains(type_)
+      return _with_0
+    end
   end
 }, {
   __call = function(self, val)

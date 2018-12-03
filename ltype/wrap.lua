@@ -45,7 +45,7 @@ callable = function(f, sig, typef, safe, silent)
             if argl[i]._signature == self._tree["in"][i] then
               table.insert(arg_i, argl[i])
             else
-              if compare(argl[i]._signature, self._tree["in"][i]) then
+              if compare(argl[i]._signature, self._tree["in"][i], safe, silent) then
                 table.insert(arg_i, argl[i])
               else
                 die("Wrong type for argument #" .. tostring(i) .. ". Expected (" .. tostring(self._tree["in"][i]) .. "), got (" .. tostring(argl[i]._signature) .. ")")

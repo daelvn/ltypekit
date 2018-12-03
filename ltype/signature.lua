@@ -11,8 +11,11 @@ binarize = function(sig)
   }
   local right = false
   local depth = 0
+  local udepth = false
   local in_cache = ""
   local out_cache = ""
+  local u_cache = ""
+  local union_cache = { }
   local agglutinate
   agglutinate = function(c)
     if right then
@@ -31,6 +34,33 @@ binarize = function(sig)
       in_cache = ""
     end
   end
+  local uagglutinate
+  uagglutinate = function(c)
+    u_cache = u_cache .. c
+  end
+  local upush_cache
+  upush_cache = function()
+    table.insert(union_cache, u_cache)
+    u_cache = ""
+  end
+  local upush_tree
+  upush_tree = function()
+    if right then
+      table.insert(tree.out, union_cache)
+      union_cache = { }
+    else
+      table.insert(tree["in"], union_cache)
+      union_cache = { }
+    end
+  end
+  local xagglutinate
+  xagglutinate = function(c)
+    if udepth then
+      return uagglutinate(c)
+    else
+      return agglutinate(c)
+    end
+  end
   local symbol = false
   for char in sig:gmatch(".") do
     local _continue_0 = false
@@ -45,6 +75,20 @@ binarize = function(sig)
       elseif ")" == _exp_0 then
         depth = depth - 1
         agglutinate(char)
+      elseif "[" == _exp_0 then
+        udepth = true
+      elseif "]" == _exp_0 then
+        if not udepth then
+          die("binarize :: unmatching brackets (])")
+        end
+        upush_cache()
+        upush_tree()
+        udepth = false
+      elseif "|" == _exp_0 then
+        if not udepth then
+          die("binarize :: OR (|) symbol used outside of union")
+        end
+        upush_cache()
       elseif "-" == _exp_0 then
         if right then
           agglutinate(char)
@@ -73,7 +117,7 @@ binarize = function(sig)
           agglutinate(char)
         end
       else
-        agglutinate(char)
+        xagglutinate(char)
       end
       _continue_0 = true
     until true
@@ -120,19 +164,32 @@ binarize = function(sig)
   end
   return tree
 end
+local printi
+printi = require("ltext").printi
 local rbinarize
 rbinarize = function(sig)
   local tree = binarize(sig)
   for i = 1, #tree["in"] do
-    if tree["in"][i]:match("%->") then
-      tree["in"][i] = rbinarize(tree["in"][i])
+    if (type(tree["in"][i])) == "string" then
+      if tree["in"][i]:match("%->") then
+        tree["in"][i] = rbinarize(tree["in"][i])
+      end
+      if tree["in"][i] == "" then
+        table.remove(tree["in"], i)
+      end
     end
   end
   for i = 1, #tree.out do
-    if tree.out[i]:match("%->") then
-      tree["in"][i] = rbinarize(tree.out[i])
+    if (type(tree.out[i])) == "string" then
+      if tree.out[i]:match("%->") then
+        tree.out[i] = rbinarize(tree.out[i])
+      end
+      if tree.out[i] == "" then
+        table.remove(tree.out, i)
+      end
     end
   end
+  return tree
 end
 local compare
 compare = function(siga, sigb, _safe, _silent)
@@ -147,6 +204,14 @@ compare = function(siga, sigb, _safe, _silent)
       return warn_(s)
     end
   end
+  local is_t
+  is_t = function(t)
+    return (type(t)) == "table"
+  end
+  local is_s
+  is_s = function(s)
+    return (type(s)) == "string"
+  end
   local rcompare
   rcompare = function(bsiga, bsigb)
     if #bsiga["in"] ~= #bsigb["in"] then
@@ -159,8 +224,48 @@ compare = function(siga, sigb, _safe, _silent)
       local _continue_0 = false
       repeat
         do
-          if ((type(bsiga["in"][1])) == "table") and ((type(bsigb["in"][1])) == "table") then
-            return rcompare(bsiga["in"], bsigb["in"])
+          if is_t(bsiga["in"][i]) then
+            if is_s(bsigb["in"][i]) then
+              local do_cont = false
+              local _list_0 = bsiga["in"][i]
+              for _index_0 = 1, #_list_0 do
+                local type__ = _list_0[_index_0]
+                if type__ == bsigb["in"][i] then
+                  do_cont = true
+                end
+              end
+              if do_cont then
+                _continue_0 = true
+                break
+              else
+                return false
+              end
+            elseif is_t(bsigb["in"][i]) then
+              if bsiga["in"][i].out or bsigb["in"][i].out then
+                return rcompare(bsiga["in"], bsigb["in"])
+              end
+              local do_cont = false
+              local _list_0 = bsiga["in"][i]
+              for _index_0 = 1, #_list_0 do
+                local type__a = _list_0[_index_0]
+                local _list_1 = bsigb["in"][i]
+                for _index_1 = 1, #_list_1 do
+                  local type__b = _list_1[_index_1]
+                  if type__a == type__b then
+                    do_cont = true
+                  end
+                end
+              end
+              if #bsiga["in"][i] ~= #bsigb["in"][i] then
+                warn("comparing union type A (#" .. tostring(#bsiga["in"][i]) .. ") and B (#" .. tostring(bsigb["in"][i]) .. ")")
+              end
+              if do_cont then
+                _continue_0 = true
+                break
+              else
+                return false
+              end
+            end
           end
           if bsiga["in"][i] == bsigb["in"][i] then
             _continue_0 = true
@@ -196,8 +301,42 @@ compare = function(siga, sigb, _safe, _silent)
       local _continue_0 = false
       repeat
         do
-          if ((type(bsiga.out[1])) == "table") and ((type(bsigb.out[1])) == "table") then
-            return rcompare(bsiga.out, bsigb.out)
+          if is_t(bsiga.out[i]) then
+            if is_s(bsigb.out[i]) then
+              local do_cont = false
+              local _list_0 = bsiga.out[i]
+              for _index_0 = 1, #_list_0 do
+                local type__ = _list_0[_index_0]
+                if type__ == bsigb.out[i] then
+                  do_cont = true
+                end
+              end
+              if do_cont then
+                _continue_0 = true
+                break
+              else
+                return false
+              end
+            elseif is_t(bsigb.out[i]) then
+              if bsiga.out[i].out or bsigb.out[i].out then
+                return rcompare(bsiga.out, bsigb.out)
+              end
+              local do_cont = false
+              local _list_0 = bsiga.out[i]
+              for _index_0 = 1, #_list_0 do
+                local type__a = _list_0[_index_0]
+                local _list_1 = bsigb.out[i]
+                for _index_1 = 1, #_list_1 do
+                  local type__b = _list_1[_index_1]
+                  if type__a == type__b then
+                    do_cont = true
+                  end
+                end
+              end
+              if #bsiga.out[i] ~= #bsigb.out[i] then
+                warn("comparing union type A (#" .. tostring(#bsiga.out[i]) .. ") and B (#" .. tostring(bsigb.out[i]) .. ")")
+              end
+            end
           end
           if bsiga.out[i] == bsigb.out[i] then
             _continue_0 = true
@@ -229,6 +368,7 @@ compare = function(siga, sigb, _safe, _silent)
         break
       end
     end
+    return true
   end
   return rcompare(rbsiga, rbsigb)
 end
