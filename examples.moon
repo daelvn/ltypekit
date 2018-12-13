@@ -1,4 +1,4 @@
-import signature    from require "ltype.init"
+import signature    from require "ltypekit.init"
 import printi, dart from require "ltext"
 
 add = (signature "number, number -> number") (a, b) -> a + b

@@ -1,4 +1,4 @@
--- ltypesign | 23.11.2018
+-- ltypekit | 23.11.2018
 -- By daelvn
 -- util functions
 color = (require "ansicolors") or ((x) -> x\gsub "%b{}","")

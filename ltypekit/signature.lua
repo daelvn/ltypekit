@@ -1,6 +1,6 @@
 local die, warn
 do
-  local _obj_0 = require("ltype.util")
+  local _obj_0 = require("ltypekit.util")
   die, warn = _obj_0.die, _obj_0.warn
 end
 local binarize

@@ -1,13 +1,13 @@
 local binarize, compare
 do
-  local _obj_0 = require("ltype.signature")
+  local _obj_0 = require("ltypekit.signature")
   binarize, compare = _obj_0.binarize, _obj_0.compare
 end
 local type
-type = require("ltype.type").type
+type = require("ltypekit.type").type
 local warn, die, contains
 do
-  local _obj_0 = require("ltype.util")
+  local _obj_0 = require("ltypekit.util")
   warn, die, contains = _obj_0.warn, _obj_0.die, _obj_0.contains
 end
 local signature, callable

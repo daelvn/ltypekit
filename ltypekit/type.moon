@@ -1,4 +1,4 @@
--- ltype | 25.11.2018
+-- ltypekit | 25.11.2018
 -- By daelvn
 -- Custom type resolver
 --   Based on typical and mtype

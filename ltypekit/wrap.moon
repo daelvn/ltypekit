@@ -1,9 +1,9 @@
--- ltype | 23.11.2018
+-- ltypekit | 23.11.2018
 -- By daelvn
 -- Wrap a function to use type signatures
-import binarize, compare   from require "ltype.signature"
-import type                from require "ltype.type"
-import warn, die, contains from require "ltype.util"
+import binarize, compare   from require "ltypekit.signature"
+import type                from require "ltypekit.type"
+import warn, die, contains from require "ltypekit.util"
 
 local signature, callable
 

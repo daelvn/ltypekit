@@ -1,5 +1,5 @@
 local signature
-signature = require("ltype.init").signature
+signature = require("ltypekit.init").signature
 local printi, dart
 do
   local _obj_0 = require("ltext")

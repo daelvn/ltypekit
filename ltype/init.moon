@@ -1,1 +1,0 @@
-return require "ltype.wrap"

@@ -1,7 +1,7 @@
--- ltypesign | 23.11.2018
+-- ltypekitsign | 23.11.2018
 -- By daelvn
 -- Signature parsing
-import die, warn from require "ltype.util"
+import die, warn from require "ltypekit.util"
 
 binarize = (sig) ->
   tree      = in: {}, out: {}
