@@ -1,9 +1,9 @@
 package = "ltypekit"
-version = "1.2.1-1"
+version = "2.0-1"
 
 source  = {
   url   = "git://github.com/daelvn/ltypekit",
-  tag   = "v1.2.1"
+  tag   = "v2.0"
 }
 
 description = {
@@ -27,6 +27,7 @@ build = {
     ["ltypekit.signature"] = "ltypekit/signature.lua",
     ["ltypekit.type"]      = "ltypekit/type.lua",
     ["ltypekit.util"]      = "ltypekit/util.lua",
-    ["ltypekit.wrap"]      = "ltypekit/wrap.lua"
+    ["ltypekit.wrap"]      = "ltypekit/wrap.lua",
+    ["ltypekit.sign"]      = "ltypekit/sign.lua"
   },
 }

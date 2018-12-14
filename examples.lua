@@ -8,9 +8,10 @@ end
 local add = (signature("number, number -> number"))(function(a, b)
   return a + b
 end)
+printi(add)
 print(dart(add(1, 1)))
 local add_curry = signature("number -> number -> number")
-add_curry = add_curry(function(a)
+add_curry(function(a)
   return function(b)
     return a + b
   end
@@ -23,7 +24,7 @@ do
   _with_0.safe = false
   add_curry_silent = _with_0
 end
-add_curry_silent = add_curry_silent(function(a)
+add_curry_silent(function(a)
   return function(b)
     return a + b
   end
@@ -36,7 +37,7 @@ do
   _with_0.safe = false
   tostring_ = _with_0
 end
-tostring_ = tostring_(function(any)
+tostring_(function(any)
   return tostring(any)
 end)
 print(dart(tostring_(nil)))
@@ -53,7 +54,7 @@ local position = signature("number, number -> position")
 local _ = position - {
   "position"
 } + position_resolver
-position = position(function(x, y)
+position(function(x, y)
   return {
     x,
     y

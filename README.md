@@ -46,19 +46,19 @@ add = (signature "number, number -> number") (a, b) -> a + b
 print add 1, 1
 
 add_curry = signature "number -> number -> number"
-add_curry = add_curry (a) -> (b) -> a + b
+add_curry (a) -> (b) -> a + b
 print  (add_curry 1, 2) 1 -- throws warning if .silent == false
 
 add_curry_silent = with signature "number -> number -> number"
   .silent = true   -- Throws warnings
   .safe   = false  -- Warnings are not errors
-add_curry_silent = add_curry_silent (a) -> (b) -> a + b
+add_curry_silent (a) -> (b) -> a + b
 print dart (add_curry_silent 1) 1
 
 tostring_ = with signature "* -> string"
   .silent = false
   .safe   = false
-tostring_ = tostring_ (any) -> tostring any
+tostring_ (any) -> tostring any
 print tostring_ nil
 print tostring_ 2
 
@@ -71,7 +71,7 @@ position_resolver = (any) ->
   else false
 position = signature "number, number -> position"
 position - {"position"} + position_resolver
-position = position (x, y) -> {x, y}
+position (x, y) -> {x, y}
 pos = position 3, 2
 print pos
 
