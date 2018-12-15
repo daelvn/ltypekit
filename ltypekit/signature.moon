@@ -100,8 +100,6 @@ binarize = (sig) ->
   -- Return
   return tree
 
-import printi from require "ltext"
-
 rbinarize = (sig) ->
   tree = binarize sig
   for i=1,#tree.in
