@@ -4,6 +4,7 @@
 import die, warn from require "ltypekit.util"
 
 binarize = (sig) ->
+  SIG       = {signature: sig}
   tree      = in: {}, out: {}
   right     = false
   depth     = 0
@@ -59,19 +60,19 @@ binarize = (sig) ->
       when "["
         udepth = true
       when "]"
-        if not udepth then die "binarize :: unmatching brackets (])"
+        if not udepth then die SIG, "binarize :: unmatching brackets (])"
         upush_cache!
         upush_tree!
         udepth = false
       when "|"
-        if not udepth then die "binarize :: OR (|) symbol used outside of union"
+        if not udepth then die SIG, "binarize :: OR (|) symbol used outside of union"
         upush_cache!
       when "-"
         if     right      then agglutinate char
         elseif depth == 0 then symbol = true
         else                   agglutinate char
       when ">"
-        if ((depth == 0) and not right) and not symbol then die "binarize :: unexpected character #{char}"
+        if ((depth == 0) and not right) and not symbol then die SIG, "binarize :: unexpected character #{char}"
         if     right then agglutinate char
         elseif depth == 0
           push_cache!
@@ -119,7 +120,7 @@ compare = (siga, sigb, _safe, _silent) ->
 
   warn_ = warn
   warn  = (s) ->
-    if _safe       then die s
+    if _safe       then die SIG, s
     if not _silent then warn_ s
 
   is_t = (t) -> (type t) == "table"

@@ -5,6 +5,9 @@ do
 end
 local binarize
 binarize = function(sig)
+  local SIG = {
+    signature = sig
+  }
   local tree = {
     ["in"] = { },
     out = { }
@@ -79,14 +82,14 @@ binarize = function(sig)
         udepth = true
       elseif "]" == _exp_0 then
         if not udepth then
-          die("binarize :: unmatching brackets (])")
+          die(SIG, "binarize :: unmatching brackets (])")
         end
         upush_cache()
         upush_tree()
         udepth = false
       elseif "|" == _exp_0 then
         if not udepth then
-          die("binarize :: OR (|) symbol used outside of union")
+          die(SIG, "binarize :: OR (|) symbol used outside of union")
         end
         upush_cache()
       elseif "-" == _exp_0 then
@@ -99,7 +102,7 @@ binarize = function(sig)
         end
       elseif ">" == _exp_0 then
         if ((depth == 0) and not right) and not symbol then
-          die("binarize :: unexpected character " .. tostring(char))
+          die(SIG, "binarize :: unexpected character " .. tostring(char))
         end
         if right then
           agglutinate(char)
@@ -198,7 +201,7 @@ compare = function(siga, sigb, _safe, _silent)
   local warn_ = warn
   warn = function(s)
     if _safe then
-      die(s)
+      die(SIG, s)
     end
     if not _silent then
       return warn_(s)

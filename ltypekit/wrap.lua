@@ -21,10 +21,13 @@ callable = function(f, sig, typef, safe, silent)
   }, {
     __type = "signed",
     __call = function(self, ...)
+      local SIG = {
+        signature = self._signature
+      }
       local warn_ = warn
       warn = function(s)
         if safe then
-          die(s)
+          die(SIG, s)
         end
         if not silent then
           return warn_(s)
@@ -48,11 +51,11 @@ callable = function(f, sig, typef, safe, silent)
               if compare(argl[i]._signature, self._tree["in"][i], safe, silent) then
                 table.insert(arg_i, argl[i])
               else
-                die("Wrong type for argument #" .. tostring(i) .. ". Expected (" .. tostring(self._tree["in"][i]) .. "), got (" .. tostring(argl[i]._signature) .. ")")
+                die(SIG, "Wrong type for argument #" .. tostring(i) .. ". Expected (" .. tostring(self._tree["in"][i]) .. "), got (" .. tostring(argl[i]._signature) .. ")")
               end
             end
           else
-            die("Wrong type for argument #" .. tostring(i) .. ". Expected a signed function, got " .. tostring(self._type(argl[i])))
+            die(SIG, "Wrong type for argument #" .. tostring(i) .. ". Expected a signed function, got " .. tostring(self._type(argl[i])))
           end
         elseif self._tree["in"][i]:match("%*") then
           table.insert(arg_i, argl[i])
@@ -60,20 +63,20 @@ callable = function(f, sig, typef, safe, silent)
           if argl[i] ~= nil then
             table.insert(arg_i, argl[i])
           else
-            die("Wrong type for argument #" .. tostring(i) .. ". Expected any value, got nil")
+            die(SIG, "Wrong type for argument #" .. tostring(i) .. ". Expected any value, got nil")
           end
         elseif contains(self._type.types, self._tree["in"][i]) then
           if (self._type(argl[i])) == self._tree["in"][i] then
             table.insert(arg_i, argl[i])
           else
-            die("Wrong type for argument #" .. tostring(i) .. ". Expected " .. tostring(self._tree["in"][i]) .. ", got " .. tostring(self._type(argl[i])) .. ".")
+            die(SIG, "Wrong type for argument #" .. tostring(i) .. ". Expected " .. tostring(self._tree["in"][i]) .. ", got " .. tostring(self._type(argl[i])) .. ".")
           end
         else
           if holders[self._tree["in"][i]] then
             if (holders[self._tree["in"][i]] == self._type(argl[i])) then
               table.insert(arg_i, argl[i])
             else
-              die("Wrong type for argument #" .. tostring(i) .. ". Expected " .. tostring(holders[self._tree["in"][i]]) .. ", got " .. tostring(self._type(argl[i])))
+              die(SIG, "Wrong type for argument #" .. tostring(i) .. ". Expected " .. tostring(holders[self._tree["in"][i]]) .. ", got " .. tostring(self._type(argl[i])))
             end
           else
             holders[self._tree["in"][i]] = self._type(argl[i])
@@ -92,7 +95,7 @@ callable = function(f, sig, typef, safe, silent)
             if arg_m[i]._signature == self._tree.out[i] then
               table.insert(arg_o, arg_m[i])
             else
-              die("Wrong type for return value #" .. tostring(i) .. ". Expected (" .. tostring(self._tree.out[i]) .. "), got (" .. tostring(arg_m[i]._signature) .. ")")
+              die(SIG, "Wrong type for return value #" .. tostring(i) .. ". Expected (" .. tostring(self._tree.out[i]) .. "), got (" .. tostring(arg_m[i]._signature) .. ")")
             end
           else
             if (self._type(arg_m[i])) == "function" then
@@ -100,7 +103,7 @@ callable = function(f, sig, typef, safe, silent)
               f = (signature(self._tree.out[i]))(arg_m[i])
               table.insert(arg_o, arg_m[i])
             else
-              die("Wrong type for return value #" .. tostring(i) .. ". Expected a signed function, got " .. tostring(self._type(arg_m[i])))
+              die(SIG, "Wrong type for return value #" .. tostring(i) .. ". Expected a signed function, got " .. tostring(self._type(arg_m[i])))
             end
           end
         elseif self._tree.out[i]:match("%*") then
@@ -109,20 +112,20 @@ callable = function(f, sig, typef, safe, silent)
           if arg_m[i] ~= nil then
             table.insert(arg_o, arg_m[i])
           else
-            die("Wrong type for return value #" .. tostring(i) .. ". Expected any value, got nil")
+            die(SIG, "Wrong type for return value #" .. tostring(i) .. ". Expected any value, got nil")
           end
         elseif contains(self._type.types, self._tree.out[i]) then
           if (self._type(arg_m[i])) == self._tree.out[i] then
             table.insert(arg_o, arg_m[i])
           else
-            die("Wrong type for return value #" .. tostring(i) .. ". Expected " .. tostring(self._tree.out[i]) .. ", got " .. tostring(self._type(arg_m[i])))
+            die(SIG, "Wrong type for return value #" .. tostring(i) .. ". Expected " .. tostring(self._tree.out[i]) .. ", got " .. tostring(self._type(arg_m[i])))
           end
         else
           if holders[self._tree.out[i]] then
             if (holders[self._tree.out[i]] == self._type(arg_m[i])) then
               table.insert(arg_o, arg_m[i])
             else
-              die("Wrong type for return value #" .. tostring(i) .. ". Expected " .. tostring(holders[self._tree.out[i]]) .. ", got " .. tostring(self._type(arg_m[i])))
+              die(SIG, "Wrong type for return value #" .. tostring(i) .. ". Expected " .. tostring(holders[self._tree.out[i]]) .. ", got " .. tostring(self._type(arg_m[i])))
             end
           else
             holders[self._tree.out[i]] = self._type(argl[i])
