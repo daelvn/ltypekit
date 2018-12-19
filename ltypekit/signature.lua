@@ -15,10 +15,13 @@ binarize = function(sig)
   local right = false
   local depth = 0
   local udepth = false
+  local gdepth = false
   local in_cache = ""
   local out_cache = ""
   local u_cache = ""
   local union_cache = { }
+  local g_cache = ""
+  local generic_cache = { }
   local agglutinate
   agglutinate = function(c)
     if right then
@@ -56,10 +59,31 @@ binarize = function(sig)
       union_cache = { }
     end
   end
+  local gagglutinate
+  gagglutinate = function(c)
+    g_cache = g_cache .. c
+  end
+  local gpush_tree
+  gpush_tree = function()
+    if right then
+      table.insert(tree.out, generic_cache)
+      generic_cache = { }
+    else
+      table.insert(tree["in"], generic_cache)
+      generic_cache = { }
+    end
+  end
+  local gpush_cache
+  gpush_cache = function()
+    table.insert(generic_cache, g_cache)
+    g_cache = ""
+  end
   local xagglutinate
   xagglutinate = function(c)
     if udepth then
       return uagglutinate(c)
+    elseif gdepth then
+      return gagglutinate(c)
     else
       return agglutinate(c)
     end
@@ -78,6 +102,8 @@ binarize = function(sig)
       elseif ")" == _exp_0 then
         depth = depth - 1
         agglutinate(char)
+      elseif "<" == _exp_0 then
+        gdepth = true
       elseif "[" == _exp_0 then
         udepth = true
       elseif "]" == _exp_0 then
@@ -88,7 +114,7 @@ binarize = function(sig)
         upush_tree()
         udepth = false
       elseif "|" == _exp_0 then
-        if not udepth then
+        if (not udepth) and (not gdepth) then
           die(SIG, "binarize :: OR (|) symbol used outside of union")
         end
         upush_cache()
@@ -167,8 +193,6 @@ binarize = function(sig)
   end
   return tree
 end
-local printi
-printi = require("ltext").printi
 local rbinarize
 rbinarize = function(sig)
   local tree = binarize(sig)

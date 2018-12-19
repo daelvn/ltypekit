@@ -1,7 +1,7 @@
 -- ltypekit | 23.11.2018
 -- By daelvn
 -- Wrap a function to use type signatures
-import binarize, compare   from require "ltypekit.signature"
+import binarize, compare   from require "ltypekit.tree"
 import type                from require "ltypekit.type"
 import warn, die, contains from require "ltypekit.util"
 

@@ -1,7 +1,7 @@
 -- ltypekit | 14.12.2018
 -- By daelvn
 -- Signed functions as a unified type
-import binarize, compare   from require "ltypekit.signature"
+import binarize, compare   from require "ltypekit.tree"
 import type                from require "ltypekit.type"
 import warn, die, contains from require "ltypekit.util"
 

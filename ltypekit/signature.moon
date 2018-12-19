@@ -9,11 +9,15 @@ binarize = (sig) ->
   right     = false
   depth     = 0
   udepth    = false
+  gdepth    = false
   in_cache  = ""
   out_cache = ""
 
   u_cache     = ""
   union_cache = {}
+
+  g_cache       = ""
+  generic_cache = {}
 
   agglutinate = (c) ->
     if right then out_cache ..= c
@@ -38,10 +42,22 @@ binarize = (sig) ->
       table.insert tree.in, union_cache
       union_cache = {}
     
+  gagglutinate = (c) -> g_cache ..= c
+  gpush_tree  = ->
+    if right
+      table.insert tree.out, generic_cache
+      generic_cache = {}
+    else
+      table.insert tree.in, generic_cache
+      generic_cache = {}
+  gpush_cache = ->
+    table.insert generic_cache, g_cache
+    g_cache = ""
 
   xagglutinate = (c) ->
-    if udepth then uagglutinate c
-    else           agglutinate c
+    if udepth     then uagglutinate c
+    elseif gdepth then gagglutinate c
+    else               agglutinate c
 
   -- symbol
   --  false: not started
@@ -57,6 +73,8 @@ binarize = (sig) ->
       when ")"
         depth -= 1
         agglutinate char
+      when "<"
+        gdepth = true
       when "["
         udepth = true
       when "]"
@@ -65,7 +83,7 @@ binarize = (sig) ->
         upush_tree!
         udepth = false
       when "|"
-        if not udepth then die SIG, "binarize :: OR (|) symbol used outside of union"
+        if (not udepth) and (not gdepth) then die SIG, "binarize :: OR (|) symbol used outside of union"
         upush_cache!
       when "-"
         if     right      then agglutinate char

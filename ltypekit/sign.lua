@@ -1,6 +1,6 @@
 local binarize, compare
 do
-  local _obj_0 = require("ltypekit.signature")
+  local _obj_0 = require("ltypekit.tree")
   binarize, compare = _obj_0.binarize, _obj_0.compare
 end
 local type
