@@ -3,6 +3,28 @@ do
   local _obj_0 = require("ltypekit.util")
   die, warn = _obj_0.die, _obj_0.warn
 end
+local is_union
+is_union = function(u)
+  if (type(u)) ~= "table" then
+    local _ = false
+  end
+  if (u[1] == 0) and ((type(u[2])) == "string") and ((type(u[3])) == "string") then
+    return true
+  else
+    return false
+  end
+end
+local is_generic
+is_generic = function(g)
+  if (type(g)) ~= "table" then
+    local _ = false
+  end
+  if (g[1] == 1) and ((type(g[2])) == "string") and ((type(g[3])) == "string") then
+    return true
+  else
+    return false
+  end
+end
 local binarize
 binarize = function(sig)
   local SIG = {
@@ -13,82 +35,124 @@ binarize = function(sig)
     out = { }
   }
   local right = false
-  local depth = 0
-  local udepth = false
-  local gdepth = false
-  local in_cache = ""
-  local out_cache = ""
-  local u_cache = ""
-  local union_cache = { }
-  local g_cache = ""
-  local generic_cache = { }
-  local agglutinate
-  agglutinate = function(c)
+  local depth = {
+    general = 0,
+    union = 0,
+    generic = 0
+  }
+  local _stack = { }
+  local stack = {
+    push = function(x)
+      return table.insert(_stack, 1, x)
+    end,
+    pop = function()
+      return table.remove(_stack, 1)
+    end,
+    peek = function()
+      return _stack[1]
+    end
+  }
+  local cache = {
+    ["in"] = "",
+    out = "",
+    iunion = "",
+    igeneric = "",
+    union = {
+      0
+    },
+    generic = {
+      1
+    }
+  }
+  cache.current = function()
     if right then
-      out_cache = out_cache .. c
+      return cache.out
     else
-      in_cache = in_cache .. c
+      return cache["in"]
     end
   end
-  local push_cache
-  push_cache = function()
-    if right then
-      table.insert(tree.out, out_cache)
-      out_cache = ""
+  local lookbehind = { }
+  local agglutinate = {
+    io = function(c)
+      if right then
+        cache.out = cache.out .. c
+      else
+        cache["in"] = cache["in"] .. c
+      end
+    end,
+    union = function(c)
+      cache.iunion = cache.iunion .. c
+    end,
+    generic = function(c)
+      cache.igeneric = cache.igeneric .. c
+    end
+  }
+  local attach = {
+    union = function()
+      table.insert(cache.union, cache.iunion)
+      cache.iunion = ""
+    end,
+    generic = function()
+      table.insert(cache.generic, cache.igeneric)
+      cache.igeneric = ""
+    end
+  }
+  local push = {
+    io = function()
+      if right then
+        table.insert(tree.out, cache.out)
+        cache.out = ""
+      else
+        table.insert(tree["in"], cache["in"])
+        cache["in"] = ""
+      end
+    end,
+    union = function()
+      if right then
+        table.insert(tree.out, cache.union)
+        cache.union = {
+          0
+        }
+      else
+        table.insert(tree["in"], cache.union)
+        cache.union = {
+          0
+        }
+      end
+    end,
+    generic = function()
+      if right then
+        table.insert(tree.out, cache.generic)
+        cache.generic = {
+          1
+        }
+      else
+        table.insert(tree["in"], cache.generic)
+        cache.generic = {
+          1
+        }
+      end
+    end
+  }
+  attach["or"] = function()
+    if stack.peek() == "[" then
+      return attach.union()
+    elseif stack.peek() == "<" then
+      return attach.generic()
     else
-      table.insert(tree["in"], in_cache)
-      in_cache = ""
+      return die(SIG, "binarize $ attempt to use '|' at unknown point.")
     end
   end
-  local uagglutinate
-  uagglutinate = function(c)
-    u_cache = u_cache .. c
-  end
-  local upush_cache
-  upush_cache = function()
-    table.insert(union_cache, u_cache)
-    u_cache = ""
-  end
-  local upush_tree
-  upush_tree = function()
-    if right then
-      table.insert(tree.out, union_cache)
-      union_cache = { }
+  agglutinate.x = function(c)
+    if stack.peek() == "[" then
+      return agglutinate.union(c)
+    elseif stack.peek() == "<" then
+      return agglutinate.generic(c)
     else
-      table.insert(tree["in"], union_cache)
-      union_cache = { }
+      return agglutinate.io(c)
     end
   end
-  local gagglutinate
-  gagglutinate = function(c)
-    g_cache = g_cache .. c
-  end
-  local gpush_tree
-  gpush_tree = function()
-    if right then
-      table.insert(tree.out, generic_cache)
-      generic_cache = { }
-    else
-      table.insert(tree["in"], generic_cache)
-      generic_cache = { }
-    end
-  end
-  local gpush_cache
-  gpush_cache = function()
-    table.insert(generic_cache, g_cache)
-    g_cache = ""
-  end
-  local xagglutinate
-  xagglutinate = function(c)
-    if udepth then
-      return uagglutinate(c)
-    elseif gdepth then
-      return gagglutinate(c)
-    else
-      return agglutinate(c)
-    end
-  end
-  local symbol = false
+  local count = 1
   for char in sig:gmatch(".") do
     local _continue_0 = false
     repeat
@@ -97,64 +161,84 @@ binarize = function(sig)
         _continue_0 = true
         break
       elseif "(" == _exp_0 then
-        depth = depth + 1
-        agglutinate(char)
+        depth.general = depth.general + 1
+        stack.push("(")
+        agglutinate.io(char)
       elseif ")" == _exp_0 then
-        depth = depth - 1
-        agglutinate(char)
-      elseif "<" == _exp_0 then
-        gdepth = true
+        if stack.peek() ~= "(" then
+          die(SIG, "binarize $ unmatching parenthesis () (index: " .. tostring(count) .. ")")
+        end
+        stack.pop()
+        depth.general = depth.general - 1
+        agglutinate.io(char)
       elseif "[" == _exp_0 then
-        udepth = true
+        depth.union = depth.union + 1
+        stack.push("[")
       elseif "]" == _exp_0 then
-        if not udepth then
-          die(SIG, "binarize :: unmatching brackets (])")
+        if stack.peek() ~= "[" then
+          die(SIG, "binarize $ unmatching square brackets [] (index: " .. tostring(count) .. ")")
         end
-        upush_cache()
-        upush_tree()
-        udepth = false
-      elseif "|" == _exp_0 then
-        if (not udepth) and (not gdepth) then
-          die(SIG, "binarize :: OR (|) symbol used outside of union")
-        end
-        upush_cache()
+        stack.pop()
+        depth.union = depth.union - 1
+        attach.union()
+        push.union()
       elseif "-" == _exp_0 then
         if right then
-          agglutinate(char)
-        elseif depth == 0 then
-          symbol = true
-        else
-          agglutinate(char)
+          agglutinate.io(char)
+        elseif depth.generic > 0 then
+          agglutinate.io(char)
         end
-      elseif ">" == _exp_0 then
-        if ((depth == 0) and not right) and not symbol then
-          die(SIG, "binarize :: unexpected character " .. tostring(char))
-        end
+      elseif "<" == _exp_0 then
+        depth.generic = depth.generic + 1
+        stack.push("<")
+        agglutinate.generic(cache.current())
         if right then
-          agglutinate(char)
-        elseif depth == 0 then
-          push_cache()
-          symbol = false
-          right = true
+          cache.out = ""
         else
-          agglutinate(char)
+          cache["in"] = ""
         end
+        attach.generic()
+      elseif ">" == _exp_0 then
+        if (lookbehind[count - 1] == "-") then
+          if right then
+            agglutinate.io(char)
+          elseif depth.general == 0 then
+            push.io()
+            right = true
+          else
+            agglutinate.io(char)
+          end
+        else
+          if stack.peek() ~= "<" then
+            die(SIG, "binarize $ unmatching angle brackets <> (index: " .. tostring(count) .. ")")
+          end
+          stack.pop()
+          depth.generic = depth.generic - 1
+          attach.generic()
+          push.generic()
+        end
+      elseif "|" == _exp_0 then
+        attach["or"]()
       elseif "," == _exp_0 then
-        if depth == 0 then
-          push_cache()
+        if depth.general == 0 then
+          push.io()
         else
-          agglutinate(char)
+          agglutinate.io(char)
         end
+      elseif "-" == _exp_0 then
+        local symbol = true
       else
-        xagglutinate(char)
+        agglutinate.x(char)
       end
+      count = count + 1
+      table.insert(lookbehind, char)
       _continue_0 = true
     until true
     if not _continue_0 then
       break
     end
   end
-  push_cache()
+  push.io()
   if #tree.out < 1 then
     tree.out = tree["in"]
     tree["in"] = { }
@@ -191,6 +275,52 @@ binarize = function(sig)
       break
     end
   end
+  local remove_empty
+  remove_empty = function(t)
+    for k, v in pairs(t) do
+      if (type(v)) == "table" then
+        t[k] = remove_empty(v)
+      else
+        if v == "" then
+          table.remove(t, k)
+        end
+      end
+    end
+    return t
+  end
+  remove_empty(tree["in"])
+  remove_empty(tree.out)
+  local assign_generics
+  assign_generics = function(t, known)
+    if known == nil then
+      known = { }
+    end
+    for k, v in pairs(t) do
+      local _continue_0 = false
+      repeat
+        if (type(v)) == "table" then
+          if v[1] == 1 then
+            known[v[2]] = v
+          else
+            t[k] = assign_generics(v, known)
+          end
+        elseif (type(v)) == "string" then
+          if known[v] then
+            t[k] = known[v]
+          end
+        else
+          _continue_0 = true
+          break
+        end
+        _continue_0 = true
+      until true
+      if not _continue_0 then
+        break
+      end
+    end
+    return t
+  end
+  assign_generics(tree)
   return tree
 end
 local rbinarize
@@ -219,9 +349,12 @@ rbinarize = function(sig)
   return tree
 end
 local compare
-compare = function(siga, sigb, _safe, _silent)
-  local rbsiga = rbinarize(siga)
-  local rbsigb = rbinarize(sigb)
+compare = function(a, b, _safe, _silent)
+  local SIG = {
+    signature = tostring(a) .. "; " .. tostring(b)
+  }
+  local ra = rbinarize(a)
+  local rb = rbinarize(b)
   local warn_ = warn
   warn = function(s)
     if _safe then
@@ -231,92 +364,222 @@ compare = function(siga, sigb, _safe, _silent)
       return warn_(s)
     end
   end
-  local is_t
-  is_t = function(t)
-    return (type(t)) == "table"
-  end
-  local is_s
-  is_s = function(s)
+  local is_string
+  is_string = function(s)
     return (type(s)) == "string"
   end
+  local is_table
+  is_table = function(t)
+    return (type(t)) == "table"
+  end
+  local is_number
+  is_number = function(n)
+    return (type(n)) == "number"
+  end
   local rcompare
-  rcompare = function(bsiga, bsigb)
-    if #bsiga["in"] ~= #bsigb["in"] then
-      return false
+  rcompare = function(ta, tb)
+    if #ta["in"] ~= #tb["in"] then
+      local _ = false
     end
-    if #bsiga.out ~= #bsigb.out then
-      return false
+    if #ta.out ~= #tb.out then
+      local _ = false
     end
-    for i = 1, #bsiga["in"] do
+    for i = 1, #ta["in"] do
       local _continue_0 = false
       repeat
-        do
-          if is_t(bsiga["in"][i]) then
-            if is_s(bsigb["in"][i]) then
-              local do_cont = false
-              local _list_0 = bsiga["in"][i]
-              for _index_0 = 1, #_list_0 do
-                local type__ = _list_0[_index_0]
-                if type__ == bsigb["in"][i] then
-                  do_cont = true
-                end
-              end
-              if do_cont then
-                _continue_0 = true
-                break
-              else
-                return false
-              end
-            elseif is_t(bsigb["in"][i]) then
-              if bsiga["in"][i].out or bsigb["in"][i].out then
-                return rcompare(bsiga["in"], bsigb["in"])
-              end
-              local do_cont = false
-              local _list_0 = bsiga["in"][i]
-              for _index_0 = 1, #_list_0 do
-                local type__a = _list_0[_index_0]
-                local _list_1 = bsigb["in"][i]
-                for _index_1 = 1, #_list_1 do
-                  local type__b = _list_1[_index_1]
-                  if type__a == type__b then
-                    do_cont = true
+        if is_table(ta["in"][i]) then
+          if is_table(tb["in"][i]) then
+            local xa = ta["in"][i]
+            local xb = tb["in"][i]
+            if xa[1] == 0 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 2, #xa do
+                local atype = xa[_index_0]
+                for _index_1 = 2, #xb do
+                  local btype = xb[_index_1]
+                  if atype == btype then
+                    common = common + 1
+                    didset = true
                   end
                 end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
               end
-              if #bsiga["in"][i] ~= #bsigb["in"][i] then
-                warn("comparing union type A (#" .. tostring(#bsiga["in"][i]) .. ") and B (#" .. tostring(bsigb["in"][i]) .. ")")
+              if notcommon > 0 then
+                warn("comparing union (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
               end
-              if do_cont then
-                _continue_0 = true
-                break
-              else
+              if common == 0 then
                 return false
               end
+              _continue_0 = true
+              break
+            elseif xa[1] == 1 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 3, #xa do
+                local atype = xa[_index_0]
+                for _index_1 = 3, #xa do
+                  local btype = xa[_index_1]
+                  if atype == btype then
+                    common = common + 1
+                    didset = true
+                  end
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("1:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "), there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            else
+              rcompare(xa, xb)
             end
+          elseif is_string(tb["in"][i]) then
+            local xa = ta["in"][i]
+            local xb = tb["in"][i]
+            if xa[1] == 0 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 2, #xa do
+                local atype = xa[_index_0]
+                if atype == xb then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("comparing union (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            elseif xa[1] == 1 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 3, #xa do
+                local atype = xa[_index_0]
+                if atype == xb then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("2:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            else
+              return false
+            end
+          elseif is_number(tb["in"][i]) then
+            die(SIG, "compare $ Impossible error I")
+          else
+            die(SIG, "compare $ Impossible error II")
           end
-          if bsiga["in"][i] == bsigb["in"][i] then
-            _continue_0 = true
-            break
-          elseif bsiga["in"][i] == "*" then
-            _continue_0 = true
-            break
-          elseif bsigb["in"][i] == "*" then
-            _continue_0 = true
-            break
-          elseif bsiga["in"][i] == "!" then
-            if bsigb["in"][i] == "*" then
-              warn("comparing (" .. tostring(siga) .. ") and (" .. tostring(sigb) .. "). signature B might take nil")
+        elseif is_string(ta["in"][i]) then
+          if is_table(tb["in"][i]) then
+            local xa = ta["in"][i]
+            local xb = tb["in"][i]
+            if xb[1] == 0 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 2, #xb do
+                local atype = xb[_index_0]
+                if atype == xa then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("comparing union (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            elseif xb[1] == 1 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 3, #xb do
+                local atype = xb[_index_0]
+                if atype == xa then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("3:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            else
+              return false
             end
-            _continue_0 = true
-            break
-          elseif bsigb["in"][i] == "!" then
-            if bsiga["in"][i] == "*" then
-              warn("comparing (" .. tostring(siga) .. ") and (" .. tostring(sigb) .. "). signature A might take nil")
+          elseif is_string(tb["in"][i]) then
+            local xa = ta["in"][i]
+            local xb = tb["in"][i]
+            if xa == xb then
+              _continue_0 = true
+              break
+            elseif (xa == "*") and (xb == "!") then
+              warn("comparing A:(" .. tostring(a) .. ") and B:(" .. tostring(b) .. "). A might take nil.")
+            elseif (xa == "!") and (xb == "!") then
+              warn("comparing A:(" .. tostring(a) .. ") and B:(" .. tostring(b) .. "). B might take nil.")
+            else
+              return false
             end
-            _continue_0 = true
-            break
+          else
+            die(SIG, "compare $ Impossible error III")
           end
-          return false
+        else
+          die(SIG, "compare $ Impossible error IV")
         end
         _continue_0 = true
       until true
@@ -324,70 +587,203 @@ compare = function(siga, sigb, _safe, _silent)
         break
       end
     end
-    for i = 1, #bsiga.out do
+    for i = 1, #ta.out do
       local _continue_0 = false
       repeat
-        do
-          if is_t(bsiga.out[i]) then
-            if is_s(bsigb.out[i]) then
-              local do_cont = false
-              local _list_0 = bsiga.out[i]
-              for _index_0 = 1, #_list_0 do
-                local type__ = _list_0[_index_0]
-                if type__ == bsigb.out[i] then
-                  do_cont = true
-                end
-              end
-              if do_cont then
-                _continue_0 = true
-                break
-              else
-                return false
-              end
-            elseif is_t(bsigb.out[i]) then
-              if bsiga.out[i].out or bsigb.out[i].out then
-                return rcompare(bsiga.out, bsigb.out)
-              end
-              local do_cont = false
-              local _list_0 = bsiga.out[i]
-              for _index_0 = 1, #_list_0 do
-                local type__a = _list_0[_index_0]
-                local _list_1 = bsigb.out[i]
-                for _index_1 = 1, #_list_1 do
-                  local type__b = _list_1[_index_1]
-                  if type__a == type__b then
-                    do_cont = true
+        if is_table(ta.out[i]) then
+          if is_table(tb.out[i]) then
+            local xa = ta.out[i]
+            local xb = tb.out[i]
+            if xa[1] == 0 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 2, #xa do
+                local atype = xa[_index_0]
+                for _index_1 = 2, #xb do
+                  local btype = xb[_index_1]
+                  if atype == btype then
+                    common = common + 1
+                    didset = false
                   end
                 end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
               end
-              if #bsiga.out[i] ~= #bsigb.out[i] then
-                warn("comparing union type A (#" .. tostring(#bsiga.out[i]) .. ") and B (#" .. tostring(bsigb.out[i]) .. ")")
+              if notcommon > 0 then
+                warn("comparing union (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
               end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            elseif xa[1] == 1 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 3, #xa do
+                local atype = xa[_index_0]
+                for _index_1 = 3, #xa do
+                  local btype = xa[_index_1]
+                  print(atype, btype)
+                  if atype == btype then
+                    common = common + 1
+                    didset = true
+                  end
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("4:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "), there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            else
+              rcompare(xa, xb)
             end
+          elseif is_string(tb.out[i]) then
+            local xa = ta.out[i]
+            local xb = tb.out[i]
+            if xa[1] == 0 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 2, #xa do
+                local atype = xa[_index_0]
+                if atype == xb then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("comparing union (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            elseif xa[1] == 1 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 3, #xa do
+                local atype = xa[_index_0]
+                if atype == xb then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("5:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            else
+              return false
+            end
+          elseif is_number(tb.out[i]) then
+            die(SIG, "compare $ Impossible error I")
+          else
+            die(SIG, "compare $ Impossible error II")
           end
-          if bsiga.out[i] == bsigb.out[i] then
-            _continue_0 = true
-            break
-          elseif bsiga.out[i] == "*" then
-            _continue_0 = true
-            break
-          elseif bsigb.out[i] == "*" then
-            _continue_0 = true
-            break
-          elseif bsiga.out[i] == "!" then
-            if bsigb.out[i] == "*" then
-              warn("comparing (" .. tostring(siga) .. ") and (" .. tostring(sigb) .. "). signature B might return nil")
+        elseif is_string(ta.out[i]) then
+          if is_table(tb.out[i]) then
+            local xa = ta.out[i]
+            local xb = tb.out[i]
+            if xb[1] == 0 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 2, #xb do
+                local atype = xb[_index_0]
+                if atype == xa then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("comparing union (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            elseif xb[1] == 1 then
+              local common = 0
+              local notcommon = 0
+              local didset = false
+              for _index_0 = 3, #xb do
+                local atype = xb[_index_0]
+                if atype == xa then
+                  common = common + 1
+                  didset = true
+                end
+                if didset then
+                  didset = false
+                else
+                  notcommon = notcommon + 1
+                end
+              end
+              if notcommon > 0 then
+                warn("6:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+              end
+              if common == 0 then
+                return false
+              end
+              _continue_0 = true
+              break
+            else
+              return false
             end
-            _continue_0 = true
-            break
-          elseif bsigb.out[i] == "!" then
-            if bsiga.out[i] == "*" then
-              warn("comparing (" .. tostring(siga) .. ") and (" .. tostring(sigb) .. "). signature A might return nil")
+          elseif is_string(tb.out[i]) then
+            local xa = ta.out[i]
+            local xb = tb.out[i]
+            if xa == xb then
+              _continue_0 = true
+              break
+            elseif (xa == "*") and (xb == "!") then
+              warn("comparing A:(" .. tostring(a) .. ") and B:(" .. tostring(b) .. "). A might take nil.")
+            elseif (xa == "!") and (xb == "!") then
+              warn("comparing A:(" .. tostring(a) .. ") and B:(" .. tostring(b) .. "). B might take nil.")
+            else
+              return false
             end
-            _continue_0 = true
-            break
+          else
+            die(SIG, "compare $ Impossible error III")
           end
-          return false
+        else
+          die(SIG, "compare $ Impossible error IV")
         end
         _continue_0 = true
       until true
@@ -397,9 +793,11 @@ compare = function(siga, sigb, _safe, _silent)
     end
     return true
   end
-  return rcompare(rbsiga, rbsigb)
+  return rcompare(ra, rb)
 end
 return {
+  is_union = is_union,
+  is_generic = is_generic,
   binarize = binarize,
   rbinarize = rbinarize,
   compare = compare
