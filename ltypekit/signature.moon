@@ -31,6 +31,15 @@ binarize = (sig) ->
   --  * Unions in parameter generics   a<x|y>       {kind:"generic",parameter:"a",generic:{"x", "y"}}
   --  * Vararg                         ...          {kind:"literal",value:"..."}
   
+  -- Shorthands
+  -- ? -> |nil
+  --   [x?]  -> [x|nil]
+  --   x<t?> -> x<t|nil>
+  -- / -> [function|signed]
+  --   table, / -> table
+  sig = sig\gsub "%?", "|nil"
+  sig = sig\gsub "/",  "[function|signed]"
+
   -- "Closed tables" (inside a side)
   -- {0,"string","number"}      -- union
   -- {1,"x","string", "number"} -- generic

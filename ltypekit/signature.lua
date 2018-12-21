@@ -27,6 +27,8 @@ is_generic = function(g)
 end
 local binarize
 binarize = function(sig)
+  sig = sig:gsub("%?", "|nil")
+  sig = sig:gsub("/", "[function|signed]")
   local SIG = {
     signature = sig
   }
