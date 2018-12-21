@@ -1,9 +1,9 @@
 package = "ltypekit"
-version = "3.0-1"
+version = "3.1-1"
 
 source  = {
   url   = "git://github.com/daelvn/ltypekit",
-  tag   = "v3.0"
+  tag   = "v3.1"
 }
 
 description = {

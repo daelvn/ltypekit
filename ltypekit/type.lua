@@ -68,6 +68,26 @@ local type = setmetatable({
     return self.resolve(val, self.resolvers)
   end
 })
+local typeof = type
+local typeforall
+typeforall = function(t)
+  local name = type(t[1])
+  local status = true
+  for _index_0 = 2, #t do
+    local value = t[_index_0]
+    if (typeof(value)) ~= name then
+      status = false
+      break
+    end
+  end
+  if status then
+    return name
+  else
+    return false
+  end
+end
 return {
-  type = type
+  type = type,
+  typeof = typeof,
+  typeforall = typeforall
 }

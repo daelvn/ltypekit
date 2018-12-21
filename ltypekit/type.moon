@@ -41,5 +41,16 @@ type = setmetatable {
 }, {
   __call: (val) => @.resolve val, @resolvers
 }
+typeof = type
 
-return {:type}
+-- Checks that all values in the list are of the same type. If so, returns the type name, otherwise false.
+typeforall = (t) ->
+  name   = type t[1]
+  status = true
+  for value in *t[2,]
+    if (typeof value) != name
+      status = false
+      break
+  return if status then name else false
+
+return { :type, :typeof, :typeforall }
