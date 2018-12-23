@@ -1,0 +1,3 @@
+-- alfons: moon
+export clean   ==> os.execute "rm -r **/*.lua *.lua"
+export compile ==> os.execute "moonc ."

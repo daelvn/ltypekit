@@ -66,10 +66,6 @@ apply_arguments = function(self, argl)
       local _list_0 = self._tree["in"][i]
       for _index_0 = 2, #_list_0 do
         local type_ = _list_0[_index_0]
-        printi({
-          type = type_,
-          argltype = (self._type(argl[i]))
-        })
         if (self._type(argl[i])) == type_ then
           didset = true
         end

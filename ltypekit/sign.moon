@@ -58,7 +58,6 @@ apply_arguments = (argl) =>
       -- Union
       didset = false
       for type_ in *@_tree.in[i][2,]
-        printi {type: type_, argltype: (@._type argl[i])}
         if (@._type argl[i]) == type_ then didset = true
       if didset
         table.insert arg_i, argl[i]
@@ -96,7 +95,6 @@ apply_arguments = (argl) =>
 
   -- Call function
   arg_m = {@._function (unpack or table.unpack) arg_i}
-
   -- Collect output
   argn  = #@_tree.out
   arg_o = {}
