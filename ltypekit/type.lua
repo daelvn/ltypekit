@@ -18,8 +18,8 @@ is_io = function(val)
 end
 local type = setmetatable({
   resolvers = {
-    has_meta,
-    is_io
+    has_meta = has_meta,
+    is_io = is_io
   },
   types = {
     "string",
@@ -32,9 +32,9 @@ local type = setmetatable({
     "signed",
     "signed_constructor"
   },
+  libraries = { },
   resolve = function(val, resolvers)
-    for _index_0 = 1, #resolvers do
-      local resolver = resolvers[_index_0]
+    for rname, resolver in pairs(resolvers) do
       local val_type = resolver(val)
       if val_type then
         return val_type
@@ -49,17 +49,37 @@ local type = setmetatable({
   add_allowed = function(self, allowed)
     return table.insert(self.types, allowed)
   end,
-  add_type = function(self, resolver, typel)
+  add_types = function(self, typel, resolver)
     table.insert(self.resolvers, resolver)
     for _index_0 = 1, #typel do
       local allowed = typel[_index_0]
       table.insert(self.types, allowed)
     end
   end,
-  resolves = function(self, type_)
+  add = function(self, xtype, resolver)
+    table.insert(self.resolvers, resolver)
+    return table.insert(self.types, xtype)
+  end,
+  export = function(self, xtype, resolver)
+    return {
+      resolver = self.resolvers[resolver],
+      type = xtype
+    }
+  end,
+  import = function(self, exported)
+    table.insert(self.resolvers, exported.resolver)
+    return table.insert(self.types, exported.type)
+  end,
+  set_library = function(self, xtype, lib)
+    self.libraries[xtype] = lib
+  end,
+  libfor = function(self, xtype)
+    return self.libraries[xtype]
+  end,
+  resolves = function(self, xtype)
     do
       local _with_0 = _(self.resolvers)
-      _with_0:contains(type_)
+      _with_0:contains(xtype)
       return _with_0
     end
   end
