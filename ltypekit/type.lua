@@ -18,8 +18,8 @@ is_io = function(val)
 end
 local type = setmetatable({
   resolvers = {
-    has_meta = has_meta,
-    is_io = is_io
+    has_meta,
+    is_io
   },
   types = {
     "string",
@@ -62,8 +62,9 @@ local type = setmetatable({
   end,
   export = function(self, xtype, resolver)
     return {
-      resolver = self.resolvers[resolver],
-      type = xtype
+      resolver = resolver,
+      type = xtype,
+      lib = (libraries[xtype] or { })
     }
   end,
   import = function(self, exported)
@@ -77,11 +78,14 @@ local type = setmetatable({
     return self.libraries[xtype]
   end,
   resolves = function(self, xtype)
-    do
-      local _with_0 = _(self.resolvers)
-      _with_0:contains(xtype)
-      return _with_0
+    local _list_0 = self.types
+    for _index_0 = 1, #_list_0 do
+      local t = _list_0[_index_0]
+      if xtype == t then
+        return true
+      end
     end
+    return false
   end
 }, {
   __call = function(self, val)
@@ -106,8 +110,13 @@ typeforall = function(t)
     return false
   end
 end
+local libfor
+libfor = function(xtype)
+  return typeof:libfor(xtype)
+end
 return {
   type = type,
   typeof = typeof,
-  typeforall = typeforall
+  typeforall = typeforall,
+  libfor = libfor
 }

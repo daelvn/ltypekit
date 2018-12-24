@@ -16,7 +16,7 @@ is_io       = (val) -> (io.type val) and "io" or false
 type = setmetatable {
   -- do not add resolvers that work for more types than yours (type_) since
   -- it could catch another value which shouldn't.
-  resolvers: {:has_meta, :is_io} -- type_ is not included so that users can add their own before type_
+  resolvers: {has_meta, is_io} -- type_ is not included so that users can add their own before type_
   types: {
     "string", "number", "boolean", "userdata", "function", "table"
     "io"
@@ -39,7 +39,7 @@ type = setmetatable {
     table.insert @resolvers, resolver
     table.insert @types,     xtype
 
-  export: (xtype, resolver) => {resolver: @resolvers[resolver], type: xtype}
+  export: (xtype, resolver) => {:resolver, type: xtype, lib: (libraries[xtype] or {})}
   import: (exported) =>
     table.insert @resolvers, exported.resolver
     table.insert @types,     exported.type
@@ -48,8 +48,8 @@ type = setmetatable {
   libfor:      (xtype)      => @libraries[xtype]
 
   resolves: (xtype) =>
-    with _ @resolvers
-      \contains xtype
+    for t in *@types do if xtype == t then return true
+    false
 }, {
   __call: (val) => @.resolve val, @resolvers
 }
@@ -65,4 +65,6 @@ typeforall = (t) ->
       break
   return if status then name else false
 
-return { :type, :typeof, :typeforall }
+libfor = (xtype) -> typeof\libfor xtype
+
+return { :type, :typeof, :typeforall, :libfor }

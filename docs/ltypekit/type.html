@@ -21,17 +21,7 @@
               
                 
                 <a class="source" href="init.html">
-                  ltypekit/init.lua
-                </a>
-              
-                
-                <a class="source" href="init.html">
                   ltypekit/init.moon
-                </a>
-              
-                
-                <a class="source" href="sign.html">
-                  ltypekit/sign.lua
                 </a>
               
                 
@@ -41,17 +31,7 @@
               
                 
                 <a class="source" href="signature.html">
-                  ltypekit/signature.lua
-                </a>
-              
-                
-                <a class="source" href="signature.html">
                   ltypekit/signature.moon
-                </a>
-              
-                
-                <a class="source" href="type.html">
-                  ltypekit/type.lua
                 </a>
               
                 
@@ -67,11 +47,6 @@
                 
                 <a class="source" href="type/Char.html">
                   ltypekit/type/Char.moon
-                </a>
-              
-                
-                <a class="source" href="util.html">
-                  ltypekit/util.lua
                 </a>
               
                 
@@ -121,7 +96,7 @@ type_ = <span class="hljs-built_in">type</span>
 <span class="hljs-built_in">type</span> = <span class="hljs-built_in">setmetatable</span> {
   <span class="hljs-comment">-- do not add resolvers that work for more types than yours (type_) since</span>
   <span class="hljs-comment">-- it could catch another value which shouldn't.</span>
-  <span class="hljs-name">resolvers</span>: {:has_meta, :is_io} <span class="hljs-comment">-- type_ is not included so that users can add their own before type_</span>
+  <span class="hljs-name">resolvers</span>: {has_meta, is_io} <span class="hljs-comment">-- type_ is not included so that users can add their own before type_</span>
   <span class="hljs-name">types</span>: {
     <span class="hljs-string">"string"</span>, <span class="hljs-string">"number"</span>, <span class="hljs-string">"boolean"</span>, <span class="hljs-string">"userdata"</span>, <span class="hljs-string">"function"</span>, <span class="hljs-string">"table"</span>
     <span class="hljs-string">"io"</span>
@@ -144,7 +119,7 @@ type_ = <span class="hljs-built_in">type</span>
     <span class="hljs-built_in">table</span>.insert @resolvers, resolver
     <span class="hljs-built_in">table</span>.insert @types,     xtype
 
-  <span class="hljs-name">export</span>: <span class="hljs-function"><span class="hljs-params">(xtype, resolver)</span> =&gt;</span> {<span class="hljs-name">resolver</span>: @resolvers[resolver], <span class="hljs-name">type</span>: xtype}
+  <span class="hljs-name">export</span>: <span class="hljs-function"><span class="hljs-params">(xtype, resolver)</span> =&gt;</span> {:resolver, <span class="hljs-name">type</span>: xtype, <span class="hljs-name">lib</span>: (libraries[xtype] <span class="hljs-keyword">or</span> {})}
   <span class="hljs-name">import</span>: <span class="hljs-function"><span class="hljs-params">(exported)</span> =&gt;</span>
     <span class="hljs-built_in">table</span>.insert @resolvers, exported.resolver
     <span class="hljs-built_in">table</span>.insert @types,     exported.<span class="hljs-built_in">type</span>
@@ -153,8 +128,8 @@ type_ = <span class="hljs-built_in">type</span>
   <span class="hljs-name">libfor</span>:      <span class="hljs-function"><span class="hljs-params">(xtype)</span>      =&gt;</span> @libraries[xtype]
 
   <span class="hljs-name">resolves</span>: <span class="hljs-function"><span class="hljs-params">(xtype)</span> =&gt;</span>
-    with _ @resolvers
-      \contains xtype
+    <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> *@types <span class="hljs-keyword">do</span> <span class="hljs-keyword">if</span> xtype == t <span class="hljs-keyword">then</span> <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
+    <span class="hljs-literal">false</span>
 }, {
   <span class="hljs-name">__call</span>: <span class="hljs-function"><span class="hljs-params">(val)</span> =&gt;</span> @.resolve val, @resolvers
 }
@@ -169,8 +144,10 @@ typeof = <span class="hljs-built_in">type</span>
       status = <span class="hljs-literal">false</span>
       <span class="hljs-keyword">break</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> status <span class="hljs-keyword">then</span> name <span class="hljs-keyword">else</span> <span class="hljs-literal">false</span>
+<span class="hljs-function">
+<span class="hljs-title">libfor</span> = <span class="hljs-params">(xtype)</span> -&gt;</span> typeof\libfor xtype
 
-<span class="hljs-keyword">return</span> { :<span class="hljs-built_in">type</span>, :typeof, :typeforall }</pre></div></div>
+<span class="hljs-keyword">return</span> { :<span class="hljs-built_in">type</span>, :typeof, :typeforall, :libfor }</pre></div></div>
             
         </li>
         
