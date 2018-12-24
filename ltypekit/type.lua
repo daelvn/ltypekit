@@ -56,20 +56,22 @@ local type = setmetatable({
       table.insert(self.types, allowed)
     end
   end,
-  add = function(self, xtype, resolver)
+  add = function(self, xtype, resolver, lib)
     table.insert(self.resolvers, resolver)
-    return table.insert(self.types, xtype)
+    table.insert(self.types, xtype)
+    self.libraries[exported.type] = lib
   end,
   export = function(self, xtype, resolver)
     return {
       resolver = resolver,
       type = xtype,
-      lib = (libraries[xtype] or { })
+      lib = (self.libraries[xtype] or { })
     }
   end,
   import = function(self, exported)
     table.insert(self.resolvers, exported.resolver)
-    return table.insert(self.types, exported.type)
+    table.insert(self.types, exported.type)
+    self.libraries[exported.type] = exported.lib
   end,
   set_library = function(self, xtype, lib)
     self.libraries[xtype] = lib

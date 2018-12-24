@@ -1,9 +1,22 @@
---> # ltypekit/type/Char
+--> # ltypekit/types/Char
 --> `Char` type in Lua.
 -- 24.12.2018
 -- By daelvn
 import sign   from require "ltypekit"
 import typeof from require "ltypekit.type"
+
+--> # Using the type
+--> This section describes the usage of the `Char` type in your code,
+--> using ltypekit.
+--> ## Registering the type
+--> To register the type, you will need to import the resolver, name and library.
+--> You can do this easily using ltypekit.type's functions:
+--> ```moon
+--> import typeof, libfor from require "ltypekit.type"
+--> CharL = require "ltypekit.types.Char"
+--> import CharT from CharL
+--> -- Import the type first
+--> typeof\import CharT, CharL
 
 --> ## char_resolver
 --> This is the code for the `Char` type used across all the codebase.
@@ -11,9 +24,6 @@ import typeof from require "ltypekit.type"
 char_resolver = (any) -> if ((type any) == "string") and any\len! == 1 then "char" else false
 typeof\add "char", char_resolver
 
---> ## CharT
---> Importable type for ltypekit.
-CharT = {resolver: char_resolver, type: "char"}
 
 --> ## Char
 --> Creates an instance of a Char.
@@ -89,7 +99,9 @@ digitToNum = (sign "char -> number") (c) -> tonumber c
 --> Converts the number into a `char`.
 numToDigit = (sign "number -> char") (c) -> Char tostring c
 
---> ## Exporting
+local CharT
+--> ## CharL
+--> Library for the `Char` type
 CharL = {
   :char_resolver, :Char, :CharT, :isChar
   :isControl, :isSpace, :isLower, :isUpper, :isAlpha, :isLetter
@@ -98,6 +110,9 @@ CharL = {
   :toUpper, :toLower
   :digitToNum, :numToDigit
 }
+--> ## CharT
+--> Importable type for ltypekit.
+CharT = {resolver: char_resolver, type: "char", lib: "CharL"}
+--> ## Export
 typeof\set_library "char", CharL
 CharL
-

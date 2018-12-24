@@ -11,10 +11,6 @@ char_resolver = function(any)
   end
 end
 typeof:add("char", char_resolver)
-local CharT = {
-  resolver = char_resolver,
-  type = "char"
-}
 local Char = sign("[string|char] -> char")
 Char(function(c)
   return c:sub(1, 1)
@@ -82,6 +78,7 @@ end)
 local numToDigit = (sign("number -> char"))(function(c)
   return Char(tostring(c))
 end)
+local CharT
 local CharL = {
   char_resolver = char_resolver,
   Char = Char,
@@ -103,6 +100,11 @@ local CharL = {
   toLower = toLower,
   digitToNum = digitToNum,
   numToDigit = numToDigit
+}
+CharT = {
+  resolver = char_resolver,
+  type = "char",
+  lib = "CharL"
 }
 typeof:set_library("char", CharL)
 return CharL

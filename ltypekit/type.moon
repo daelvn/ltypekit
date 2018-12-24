@@ -35,14 +35,16 @@ type = setmetatable {
   add_types:    (typel, resolver) =>
     table.insert @resolvers, resolver
     for allowed in *typel do table.insert @types, allowed
-  add:          (xtype, resolver) =>
+  add:          (xtype, resolver, lib) =>
     table.insert @resolvers, resolver
     table.insert @types,     xtype
+    @libraries[exported.type] = lib
 
-  export: (xtype, resolver) => {:resolver, type: xtype, lib: (libraries[xtype] or {})}
+  export: (xtype, resolver) => {:resolver, type: xtype, lib: (@libraries[xtype] or {})}
   import: (exported) =>
     table.insert @resolvers, exported.resolver
     table.insert @types,     exported.type
+    @libraries[exported.type] = exported.lib
 
   set_library: (xtype, lib) => @libraries[xtype] = lib
   libfor:      (xtype)      => @libraries[xtype]

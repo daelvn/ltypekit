@@ -2,7 +2,7 @@
 
 <html>
 <head>
-  <title>ltypekit/type/Char</title>
+  <title>ltypekit/types/Char</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
   <link rel="stylesheet" media="all" href="../../docco-nord.css" />
@@ -10,54 +10,6 @@
 <body>
   <div id="container">
     <div id="background"></div>
-    
-      <ul id="jump_to">
-        <li>
-          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
-          <a class="small" href="javascript:void(0);">+</a>
-          <div id="jump_wrapper">
-          <div id="jump_page_wrapper">
-            <div id="jump_page">
-              
-                
-                <a class="source" href="../init.html">
-                  ltypekit/init.moon
-                </a>
-              
-                
-                <a class="source" href="../sign.html">
-                  ltypekit/sign.moon
-                </a>
-              
-                
-                <a class="source" href="../signature.html">
-                  ltypekit/signature.moon
-                </a>
-              
-                
-                <a class="source" href="../type.html">
-                  ltypekit/type.moon
-                </a>
-              
-                
-                <a class="source" href="Char.html">
-                  ltypekit/type/Char.lua
-                </a>
-              
-                
-                <a class="source" href="Char.html">
-                  ltypekit/type/Char.moon
-                </a>
-              
-                
-                <a class="source" href="../util.html">
-                  ltypekit/util.moon
-                </a>
-              
-            </div>
-          </div>
-        </li>
-      </ul>
     
     <ul class="sections">
         
@@ -69,7 +21,7 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              <h1 id="ltypekit-type-char">ltypekit/type/Char</h1>
+              <h1 id="ltypekit-types-char">ltypekit/types/Char</h1>
 <p><code>Char</code> type in Lua.</p>
 
             </div>
@@ -88,14 +40,20 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
-              <h2 id="char_resolver">char_resolver</h2>
-<p>This is the code for the <code>Char</code> type used across all the codebase.
-It is simply a checker for 1-long strings.</p>
+              <h1 id="using-the-type">Using the type</h1>
+<p>This section describes the usage of the <code>Char</code> type in your code,
+using ltypekit.</p>
+<h2 id="registering-the-type">Registering the type</h2>
+<p>To register the type, you will need to import the resolver, name and library.
+You can do this easily using ltypekit.type’s functions:
+```moon
+import typeof, libfor from require “ltypekit.type”
+CharL = require “ltypekit.types.Char”
+import CharT from CharL
+– Import the type first
+typeof\import CharT, CharL</p>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">char_resolver</span> = <span class="hljs-params">(any)</span> -&gt;</span> <span class="hljs-keyword">if</span> ((<span class="hljs-built_in">type</span> any) == <span class="hljs-string">"string"</span>) <span class="hljs-keyword">and</span> any\len! == <span class="hljs-number">1</span> <span class="hljs-keyword">then</span> <span class="hljs-string">"char"</span> <span class="hljs-keyword">else</span> <span class="hljs-literal">false</span>
-typeof\add <span class="hljs-string">"char"</span>, char_resolver</pre></div></div>
             
         </li>
         
@@ -106,12 +64,14 @@ typeof\add <span class="hljs-string">"char"</span>, char_resolver</pre></div></d
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <h2 id="chart">CharT</h2>
-<p>Importable type for ltypekit.</p>
+              <h2 id="char_resolver">char_resolver</h2>
+<p>This is the code for the <code>Char</code> type used across all the codebase.
+It is simply a checker for 1-long strings.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>CharT = {<span class="hljs-name">resolver</span>: char_resolver, <span class="hljs-name">type</span>: <span class="hljs-string">"char"</span>}</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">char_resolver</span> = <span class="hljs-params">(any)</span> -&gt;</span> <span class="hljs-keyword">if</span> ((<span class="hljs-built_in">type</span> any) == <span class="hljs-string">"string"</span>) <span class="hljs-keyword">and</span> any\len! == <span class="hljs-number">1</span> <span class="hljs-keyword">then</span> <span class="hljs-string">"char"</span> <span class="hljs-keyword">else</span> <span class="hljs-literal">false</span>
+typeof\add <span class="hljs-string">"char"</span>, char_resolver</pre></div></div>
             
         </li>
         
@@ -460,7 +420,9 @@ isLetter = isAlpha</pre></div></div>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">numToDigit</span> = <span class="hljs-params">(sign <span class="hljs-string">"number -&gt; char"</span>)</span> <span class="hljs-params">(c)</span> -&gt;</span> Char <span class="hljs-built_in">tostring</span> c</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">numToDigit</span> = <span class="hljs-params">(sign <span class="hljs-string">"number -&gt; char"</span>)</span> <span class="hljs-params">(c)</span> -&gt;</span> Char <span class="hljs-built_in">tostring</span> c
+
+<span class="hljs-keyword">local</span> CharT</pre></div></div>
             
         </li>
         
@@ -471,7 +433,8 @@ isLetter = isAlpha</pre></div></div>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
-              <h2 id="exporting">Exporting</h2>
+              <h2 id="charl">CharL</h2>
+<p>Library for the <code>Char</code> type</p>
 
             </div>
             
@@ -482,8 +445,38 @@ isLetter = isAlpha</pre></div></div>
   :isPunctuation
   :toUpper, :toLower
   :digitToNum, :numToDigit
-}
-typeof\set_library <span class="hljs-string">"char"</span>, CharL
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <h2 id="chart">CharT</h2>
+<p>Importable type for ltypekit.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>CharT = {<span class="hljs-name">resolver</span>: char_resolver, <span class="hljs-name">type</span>: <span class="hljs-string">"char"</span>, <span class="hljs-name">lib</span>: <span class="hljs-string">"CharL"</span>}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <h2 id="export">Export</h2>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>typeof\set_library <span class="hljs-string">"char"</span>, CharL
 CharL</pre></div></div>
             
         </li>
