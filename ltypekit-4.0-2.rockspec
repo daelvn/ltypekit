@@ -1,5 +1,5 @@
 package = "ltypekit"
-version = "4.0-1"
+version = "4.0-2"
 source = {
    url = "git://github.com/daelvn/ltypekit",
    tag = "v4.0"
@@ -25,6 +25,6 @@ build = {
       ["ltypekit.type"] = "ltypekit/type.lua",
       ["ltypekit.util"] = "ltypekit/util.lua",
       
-      ["ltypekit.type.Char"] = "ltypekit/type/Char.lua"
+      ["ltypekit.types.Char"] = "ltypekit/types/Char.lua"
    }
 }
