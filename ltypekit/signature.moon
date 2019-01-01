@@ -12,7 +12,7 @@ is_union = (u) ->
   else
     false
 
-is_generic = (g) ->
+is_constraint = (g) ->
   if (type g) != "table" then false
   if (g[1] == 1)               and
      ((type g[2]) == "string") and
@@ -23,13 +23,13 @@ is_generic = (g) ->
 
 binarize = (sig) ->
   -- We have to support
-  --  * Types                          string       {kind:"literal",value:"string"}
-  --  * Type parameters                a            {kind:"literal",value:"a"}
-  --  * Unspecified unions             *            {kind:"literal",value:"*",except_nil:false}
-  --  * Unions                         [a|b]        {kind:"union",tree:{"a", "b"}}
-  --  * Parameter generics             a<Integer>   {kind:"generic",parameter:"a",generic:"Integer"}
-  --  * Unions in parameter generics   a<x|y>       {kind:"generic",parameter:"a",generic:{"x", "y"}}
-  --  * Vararg                         ...          {kind:"literal",value:"..."}
+  --  * Types                             string       {kind:"literal",value:"string"}
+  --  * Type parameters                   a            {kind:"literal",value:"a"}
+  --  * Unspecified unions                *            {kind:"literal",value:"*",except_nil:false}
+  --  * Unions                            [a|b]        {kind:"union",tree:{"a", "b"}}
+  --  * Parameter constraints             a<Integer>   {kind:"constraint",parameter:"a",constraint:"Integer"}
+  --  * Unions in parameter constraints   a<x|y>       {kind:"constraint",parameter:"a",constraint:{"x", "y"}}
+  --  * Vararg                            ...          {kind:"literal",value:"..."}
   
   -- Shorthands
   -- ? -> |nil
@@ -42,16 +42,16 @@ binarize = (sig) ->
 
   -- "Closed tables" (inside a side)
   -- {0,"string","number"}      -- union
-  -- {1,"x","string", "number"} -- generic
+  -- {1,"x","string", "number"} -- constraint
   SIG = {signature: sig}
 
   tree  = in: {}, out: {}
   right = false
 
   depth =
-    general: 0
-    union:   0
-    generic: 0
+    general:    0
+    union:      0
+    constraint: 0
 
   _stack = {}
   stack  =
@@ -60,67 +60,70 @@ binarize = (sig) ->
     peek:     -> _stack[1]
 
   cache =
-    in:       ""
-    out:      ""
-    iunion:   ""
-    igeneric: ""
+    in:          ""
+    out:         ""
+    iunion:      ""
+    iconstraint: ""
 
-    union:   {0}
-    generic: {1}
+    union:      {0}
+    constraint: {1}
 
-  cache.current = -> if right then cache.out else cache.in
+    empty:      {}
+
+  cache.current  = -> if right then cache.out else cache.in
+  cache.empty.io = -> if right then cache.out = "" else cache.in = ""
 
   lookbehind = {}
 
   agglutinate =
-    io:      (c) -> if right then cache.out ..= c else cache.in ..= c
-    union:   (c) -> cache.iunion   ..= c
-    generic: (c) -> cache.igeneric ..= c
+    io:         (c) -> if right then cache.out ..= c else cache.in ..= c
+    union:      (c) -> cache.iunion            ..= c
+    constraint: (c) -> cache.iconstraint       ..= c
 
   attach =
     union:   ->
       table.insert cache.union, cache.iunion
       cache.iunion = ""
-    generic: ->
-      table.insert cache.generic, cache.igeneric
-      cache.igeneric = ""
+    constraint: ->
+      table.insert cache.constraint, cache.iconstraint
+      cache.iconstraint = ""
 
   push =
-    io:      ->
+    io: ->
       if right
         table.insert tree.out, cache.out
         cache.out = ""
       else
         table.insert tree.in, cache.in
         cache.in = ""
-    union:   ->
+    union: ->
       if right
         table.insert tree.out, cache.union
         cache.union = {0}
       else
         table.insert tree.in, cache.union
         cache.union = {0}
-    generic: ->
+    constraint: ->
       if right
-        table.insert tree.out, cache.generic
-        cache.generic = {1}
+        table.insert tree.out, cache.constraint
+        cache.constraint = {1}
       else
-        table.insert tree.in, cache.generic
-        cache.generic = {1}
+        table.insert tree.in, cache.constraint
+        cache.constraint = {1}
   
   attach.or = ->
     if stack.peek! == "["
       attach.union!
-    elseif stack.peek! == "<"
-      attach.generic!
+    elseif stack.peek! == "{"
+      attach.constraint!
     else
       die SIG, "binarize $ attempt to use '|' at unknown point."
 
   agglutinate.x = (c) ->
     if stack.peek! == "["
       agglutinate.union c
-    elseif stack.peek! == "<"
-      agglutinate.generic c
+    elseif stack.peek! == "{"
+      agglutinate.constraint c
     else
       agglutinate.io c
 
@@ -140,28 +143,58 @@ binarize = (sig) ->
         stack.pop!
         depth.general -= 1
         agglutinate.io char
+
       -- Unions
       when "["
-        depth.union += 1
-        stack.push "["
+        if right
+          agglutinate.io char
+        elseif depth.general == 0
+          depth.union += 1
+          stack.push "["
+        else
+          agglutinate.io char
       when "]"
-        if stack.peek! != "["
-          die SIG, "binarize $ unmatching square brackets [] (index: #{count})"
-        stack.pop!
-        depth.union -= 1
-        attach.union!
-        push.union!
+        if right
+          agglutinate.io char
+        elseif depth.general == 0
+          if stack.peek! != "["
+            die SIG, "binarize $ unmatching square brackets [] (index: #{count})"
+          stack.pop!
+          depth.union -= 1
+          attach.union!
+          push.union!
+        else
+          agglutinate.io char
+
+      -- Constraints
+      when "{"
+        if right
+          agglutinate.io char
+        elseif depth.general == 0
+          depth.constraint += 1
+          stack.push "{"
+          -- Push the parameter
+          agglutinate.constraint cache.current!
+          cache.empty.io!
+          attach.constraint!
+        else
+          agglutinate.io char
+      when "}"
+        if right
+          agglutinate.io char
+        elseif depth.general == 0
+          if stack.peek! != "{"
+            die SIG, "binarize $ unmatching curly brackets {} (index: #{count})"
+          stack.pop!
+          depth.constraint -= 1
+          attach.constraint!
+          push.constraint!
+      
+      -- Functions
       when "-"
         if     right              then agglutinate.io char
-        elseif depth.generic > 0  then agglutinate.io char
-      -- Generics
-      when "<"
-        depth.generic += 1
-        stack.push "<"
-        -- We have to push the parameter initializer here too
-        agglutinate.generic cache.current!
-        if right then cache.out = "" else cache.in = ""
-        attach.generic!
+        elseif depth.general == 0 then symbol = true         -- This is just a decorative line
+        else                           agglutinate.io char
       when ">"
         -- Symbol exception
         if (lookbehind[count-1] == "-")
@@ -172,20 +205,19 @@ binarize = (sig) ->
           else
             agglutinate.io char
         else
-          if stack.peek! != "<"
-            die SIG, "binarize $ unmatching angle brackets <> (index: #{count})"
-          stack.pop!
-          depth.generic -= 1
-          attach.generic!
-          push.generic!
+          die SIG, "binarize $ unexpected character '-'"
+
+      -- OR
       when "|"
-        attach.or!
+        if     right              then agglutinate.io char
+        elseif depth.general == 0 then attach.or!
+        else                           agglutinate.io char
+
+      -- Separator
       when ","
         if depth.general == 0
           push.io!
         else agglutinate.io char
-      when "-"
-        symbol = true
       else
         agglutinate.x char
     count += 1
@@ -203,6 +235,9 @@ binarize = (sig) ->
   for n, argument in ipairs tree.out
     if (type argument) != "string" then continue
     if argument\match "%(.+%)"     then tree.out[n] = argument\sub 2, -2
+  -- Finalize .out if just a return value (only unions or constraints)
+  if (#tree.out == 1) and not (tree.out[1]\match "%->") and (tree.out[1]\match "[%[<>%]]")
+    tree.out[1] = (binarize tree.out[1]).out[1]
   -- Fix empty strings
   remove_empty = (t) ->
     for k, v in pairs t do
@@ -214,20 +249,20 @@ binarize = (sig) ->
     t
   remove_empty tree.in
   remove_empty tree.out
-  -- Automatically assign generics
-  assign_generics = (t,known={}) ->
+  -- Automatically assign constraints
+  assign_constraints = (t,known={}) ->
     for k, v in pairs t do
       if (type v) == "table"
         if v[1] == 1
           known[v[2]] = v
         else
-          t[k] = assign_generics v, known
+          t[k] = assign_constraints v, known
       elseif (type v) == "string"
         if known[v]
           t[k] = known[v]
       else continue
     t
-  assign_generics tree
+  assign_constraints tree
   -- Return binarized tree
   tree
 
@@ -276,7 +311,7 @@ compare = (a, b, _safe, _silent) ->
     for i=1, #ta.in
       if is_table ta.in[i]
         if is_table tb.in[i]
-          -- Union, Generic, rcompare
+          -- Union, Constraint, rcompare
           xa = ta.in[i]
           xb = tb.in[i]
 
@@ -301,7 +336,7 @@ compare = (a, b, _safe, _silent) ->
               return false
             continue
           elseif xa[1] == 1
-            -- Generic
+            -- Constraint
             common    = 0
             notcommon = 0
             didset    = false
@@ -316,7 +351,7 @@ compare = (a, b, _safe, _silent) ->
                 notcommon += 1
             --
             if notcommon > 0
-              warn "1:#{common} comparing generic (##{xa}) and (##{xb}), there are #{notcommon} unmatching types"
+              warn "1:#{common} comparing constraint (##{xa}) and (##{xb}), there are #{notcommon} unmatching types"
             if common == 0
               return false
             continue
@@ -324,7 +359,7 @@ compare = (a, b, _safe, _silent) ->
             -- rcompare
             rcompare xa, xb
         elseif is_string tb.in[i]
-          -- Union, Generic
+          -- Union, Constraint
           xa = ta.in[i]
           xb = tb.in[i]
           
@@ -348,7 +383,7 @@ compare = (a, b, _safe, _silent) ->
               return false
             continue
           elseif xa[1] == 1
-            -- Generic
+            -- Constraint
             common    = 0
             notcommon = 0
             didset    = false
@@ -362,7 +397,7 @@ compare = (a, b, _safe, _silent) ->
                 notcommon += 1
             --
             if notcommon > 0
-              warn "2:#{common} comparing generic (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
+              warn "2:#{common} comparing constraint (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
             if common == 0
               return false
             continue
@@ -375,7 +410,7 @@ compare = (a, b, _safe, _silent) ->
           die SIG, "compare $ Impossible error II"
       elseif is_string ta.in[i]
         if is_table tb.in[i]
-          -- Union, Generic
+          -- Union, Constraint
           xa = ta.in[i]
           xb = tb.in[i]
 
@@ -399,7 +434,7 @@ compare = (a, b, _safe, _silent) ->
               return false
             continue
           elseif xb[1] == 1
-            -- Generic
+            -- Constraint
             common    = 0
             notcommon = 0
             didset    = false
@@ -413,7 +448,7 @@ compare = (a, b, _safe, _silent) ->
                 notcommon += 1
             --
             if notcommon > 0
-              warn "3:#{common} comparing generic (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
+              warn "3:#{common} comparing constraint (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
             if common == 0
               return false
             continue
@@ -438,7 +473,7 @@ compare = (a, b, _safe, _silent) ->
     for i=1, #ta.out
       if is_table ta.out[i]
         if is_table tb.out[i]
-          -- Union, Generic, rcompare
+          -- Union, Constraint, rcompare
           xa = ta.out[i]
           xb = tb.out[i]
 
@@ -463,13 +498,12 @@ compare = (a, b, _safe, _silent) ->
               return false
             continue
           elseif xa[1] == 1
-            -- Generic
+            -- Constraint
             common    = 0
             notcommon = 0
             didset    = false
             for atype in *xa[3,]
               for btype in *xa[3,]
-                print atype, btype
                 if atype == btype
                   common += 1
                   didset  = true
@@ -479,7 +513,7 @@ compare = (a, b, _safe, _silent) ->
                 notcommon += 1
             --
             if notcommon > 0
-              warn "4:#{common} comparing generic (##{xa}) and (##{xb}), there are #{notcommon} unmatching types"
+              warn "4:#{common} comparing constraint (##{xa}) and (##{xb}), there are #{notcommon} unmatching types"
             if common == 0
               return false
             continue
@@ -487,7 +521,7 @@ compare = (a, b, _safe, _silent) ->
             -- rcompare
             rcompare xa, xb
         elseif is_string tb.out[i]
-          -- Union, Generic
+          -- Union, Constraint
           xa = ta.out[i]
           xb = tb.out[i]
           
@@ -511,7 +545,7 @@ compare = (a, b, _safe, _silent) ->
               return false
             continue
           elseif xa[1] == 1
-            -- Generic
+            -- Constraint
             common    = 0
             notcommon = 0
             didset    = false
@@ -525,7 +559,7 @@ compare = (a, b, _safe, _silent) ->
                 notcommon += 1
             --
             if notcommon > 0
-              warn "5:#{common} comparing generic (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
+              warn "5:#{common} comparing constraint (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
             if common == 0
               return false
             continue
@@ -538,7 +572,7 @@ compare = (a, b, _safe, _silent) ->
           die SIG, "compare $ Impossible error II"
       elseif is_string ta.out[i]
         if is_table tb.out[i]
-          -- Union, Generic
+          -- Union, Constraint
           xa = ta.out[i]
           xb = tb.out[i]
 
@@ -562,7 +596,7 @@ compare = (a, b, _safe, _silent) ->
               return false
             continue
           elseif xb[1] == 1
-            -- Generic
+            -- Constraint
             common    = 0
             notcommon = 0
             didset    = false
@@ -576,7 +610,7 @@ compare = (a, b, _safe, _silent) ->
                 notcommon += 1
             --
             if notcommon > 0
-              warn "6:#{common} comparing generic (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
+              warn "6:#{common} comparing constraint (##{xa}) and (##{xb}}, there are #{notcommon} unmatching types"
             if common == 0
               return false
             continue
@@ -601,4 +635,4 @@ compare = (a, b, _safe, _silent) ->
 
   rcompare ra, rb
 
-{:is_union, :is_generic, :binarize, :rbinarize, :compare}
+{:is_union, :is_constraint, :binarize, :rbinarize, :compare}

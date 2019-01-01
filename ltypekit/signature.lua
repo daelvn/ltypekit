@@ -14,8 +14,8 @@ is_union = function(u)
     return false
   end
 end
-local is_generic
-is_generic = function(g)
+local is_constraint
+is_constraint = function(g)
   if (type(g)) ~= "table" then
     local _ = false
   end
@@ -40,7 +40,7 @@ binarize = function(sig)
   local depth = {
     general = 0,
     union = 0,
-    generic = 0
+    constraint = 0
   }
   local _stack = { }
   local stack = {
@@ -58,19 +58,27 @@ binarize = function(sig)
     ["in"] = "",
     out = "",
     iunion = "",
-    igeneric = "",
+    iconstraint = "",
     union = {
       0
     },
-    generic = {
+    constraint = {
       1
-    }
+    },
+    empty = { }
   }
   cache.current = function()
     if right then
       return cache.out
     else
       return cache["in"]
+    end
+  end
+  cache.empty.io = function()
+    if right then
+      cache.out = ""
+    else
+      cache["in"] = ""
     end
   end
   local lookbehind = { }
@@ -85,8 +93,8 @@ binarize = function(sig)
     union = function(c)
       cache.iunion = cache.iunion .. c
     end,
-    generic = function(c)
-      cache.igeneric = cache.igeneric .. c
+    constraint = function(c)
+      cache.iconstraint = cache.iconstraint .. c
     end
   }
   local attach = {
@@ -94,9 +102,9 @@ binarize = function(sig)
       table.insert(cache.union, cache.iunion)
       cache.iunion = ""
     end,
-    generic = function()
-      table.insert(cache.generic, cache.igeneric)
-      cache.igeneric = ""
+    constraint = function()
+      table.insert(cache.constraint, cache.iconstraint)
+      cache.iconstraint = ""
     end
   }
   local push = {
@@ -122,15 +130,15 @@ binarize = function(sig)
         }
       end
     end,
-    generic = function()
+    constraint = function()
       if right then
-        table.insert(tree.out, cache.generic)
-        cache.generic = {
+        table.insert(tree.out, cache.constraint)
+        cache.constraint = {
           1
         }
       else
-        table.insert(tree["in"], cache.generic)
-        cache.generic = {
+        table.insert(tree["in"], cache.constraint)
+        cache.constraint = {
           1
         }
       end
@@ -139,8 +147,8 @@ binarize = function(sig)
   attach["or"] = function()
     if stack.peek() == "[" then
       return attach.union()
-    elseif stack.peek() == "<" then
-      return attach.generic()
+    elseif stack.peek() == "{" then
+      return attach.constraint()
     else
       return die(SIG, "binarize $ attempt to use '|' at unknown point.")
     end
@@ -148,8 +156,8 @@ binarize = function(sig)
   agglutinate.x = function(c)
     if stack.peek() == "[" then
       return agglutinate.union(c)
-    elseif stack.peek() == "<" then
-      return agglutinate.generic(c)
+    elseif stack.peek() == "{" then
+      return agglutinate.constraint(c)
     else
       return agglutinate.io(c)
     end
@@ -174,32 +182,60 @@ binarize = function(sig)
         depth.general = depth.general - 1
         agglutinate.io(char)
       elseif "[" == _exp_0 then
-        depth.union = depth.union + 1
-        stack.push("[")
-      elseif "]" == _exp_0 then
-        if stack.peek() ~= "[" then
-          die(SIG, "binarize $ unmatching square brackets [] (index: " .. tostring(count) .. ")")
+        if right then
+          agglutinate.io(char)
+        elseif depth.general == 0 then
+          depth.union = depth.union + 1
+          stack.push("[")
+        else
+          agglutinate.io(char)
         end
-        stack.pop()
-        depth.union = depth.union - 1
-        attach.union()
-        push.union()
+      elseif "]" == _exp_0 then
+        if right then
+          agglutinate.io(char)
+        elseif depth.general == 0 then
+          if stack.peek() ~= "[" then
+            die(SIG, "binarize $ unmatching square brackets [] (index: " .. tostring(count) .. ")")
+          end
+          stack.pop()
+          depth.union = depth.union - 1
+          attach.union()
+          push.union()
+        else
+          agglutinate.io(char)
+        end
+      elseif "{" == _exp_0 then
+        if right then
+          agglutinate.io(char)
+        elseif depth.general == 0 then
+          depth.constraint = depth.constraint + 1
+          stack.push("{")
+          agglutinate.constraint(cache.current())
+          cache.empty.io()
+          attach.constraint()
+        else
+          agglutinate.io(char)
+        end
+      elseif "}" == _exp_0 then
+        if right then
+          agglutinate.io(char)
+        elseif depth.general == 0 then
+          if stack.peek() ~= "{" then
+            die(SIG, "binarize $ unmatching curly brackets {} (index: " .. tostring(count) .. ")")
+          end
+          stack.pop()
+          depth.constraint = depth.constraint - 1
+          attach.constraint()
+          push.constraint()
+        end
       elseif "-" == _exp_0 then
         if right then
           agglutinate.io(char)
-        elseif depth.generic > 0 then
+        elseif depth.general == 0 then
+          local symbol = true
+        else
           agglutinate.io(char)
         end
-      elseif "<" == _exp_0 then
-        depth.generic = depth.generic + 1
-        stack.push("<")
-        agglutinate.generic(cache.current())
-        if right then
-          cache.out = ""
-        else
-          cache["in"] = ""
-        end
-        attach.generic()
       elseif ">" == _exp_0 then
         if (lookbehind[count - 1] == "-") then
           if right then
@@ -211,24 +247,22 @@ binarize = function(sig)
             agglutinate.io(char)
           end
         else
-          if stack.peek() ~= "<" then
-            die(SIG, "binarize $ unmatching angle brackets <> (index: " .. tostring(count) .. ")")
-          end
-          stack.pop()
-          depth.generic = depth.generic - 1
-          attach.generic()
-          push.generic()
+          die(SIG, "binarize $ unexpected character '-'")
         end
       elseif "|" == _exp_0 then
-        attach["or"]()
+        if right then
+          agglutinate.io(char)
+        elseif depth.general == 0 then
+          attach["or"]()
+        else
+          agglutinate.io(char)
+        end
       elseif "," == _exp_0 then
         if depth.general == 0 then
           push.io()
         else
           agglutinate.io(char)
         end
-      elseif "-" == _exp_0 then
-        local symbol = true
       else
         agglutinate.x(char)
       end
@@ -277,6 +311,9 @@ binarize = function(sig)
       break
     end
   end
+  if (#tree.out == 1) and not (tree.out[1]:match("%->")) and (tree.out[1]:match("[%[<>%]]")) then
+    tree.out[1] = (binarize(tree.out[1])).out[1]
+  end
   local remove_empty
   remove_empty = function(t)
     for k, v in pairs(t) do
@@ -292,8 +329,8 @@ binarize = function(sig)
   end
   remove_empty(tree["in"])
   remove_empty(tree.out)
-  local assign_generics
-  assign_generics = function(t, known)
+  local assign_constraints
+  assign_constraints = function(t, known)
     if known == nil then
       known = { }
     end
@@ -304,7 +341,7 @@ binarize = function(sig)
           if v[1] == 1 then
             known[v[2]] = v
           else
-            t[k] = assign_generics(v, known)
+            t[k] = assign_constraints(v, known)
           end
         elseif (type(v)) == "string" then
           if known[v] then
@@ -322,7 +359,7 @@ binarize = function(sig)
     end
     return t
   end
-  assign_generics(tree)
+  assign_constraints(tree)
   return tree
 end
 local rbinarize
@@ -440,7 +477,7 @@ compare = function(a, b, _safe, _silent)
                 end
               end
               if notcommon > 0 then
-                warn("1:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "), there are " .. tostring(notcommon) .. " unmatching types")
+                warn("1:" .. tostring(common) .. " comparing constraint (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "), there are " .. tostring(notcommon) .. " unmatching types")
               end
               if common == 0 then
                 return false
@@ -494,7 +531,7 @@ compare = function(a, b, _safe, _silent)
                 end
               end
               if notcommon > 0 then
-                warn("2:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+                warn("2:" .. tostring(common) .. " comparing constraint (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
               end
               if common == 0 then
                 return false
@@ -554,7 +591,7 @@ compare = function(a, b, _safe, _silent)
                 end
               end
               if notcommon > 0 then
-                warn("3:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+                warn("3:" .. tostring(common) .. " comparing constraint (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
               end
               if common == 0 then
                 return false
@@ -631,7 +668,6 @@ compare = function(a, b, _safe, _silent)
                 local atype = xa[_index_0]
                 for _index_1 = 3, #xa do
                   local btype = xa[_index_1]
-                  print(atype, btype)
                   if atype == btype then
                     common = common + 1
                     didset = true
@@ -644,7 +680,7 @@ compare = function(a, b, _safe, _silent)
                 end
               end
               if notcommon > 0 then
-                warn("4:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "), there are " .. tostring(notcommon) .. " unmatching types")
+                warn("4:" .. tostring(common) .. " comparing constraint (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "), there are " .. tostring(notcommon) .. " unmatching types")
               end
               if common == 0 then
                 return false
@@ -698,7 +734,7 @@ compare = function(a, b, _safe, _silent)
                 end
               end
               if notcommon > 0 then
-                warn("5:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+                warn("5:" .. tostring(common) .. " comparing constraint (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
               end
               if common == 0 then
                 return false
@@ -758,7 +794,7 @@ compare = function(a, b, _safe, _silent)
                 end
               end
               if notcommon > 0 then
-                warn("6:" .. tostring(common) .. " comparing generic (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
+                warn("6:" .. tostring(common) .. " comparing constraint (#" .. tostring(xa) .. ") and (#" .. tostring(xb) .. "}, there are " .. tostring(notcommon) .. " unmatching types")
               end
               if common == 0 then
                 return false
@@ -799,7 +835,7 @@ compare = function(a, b, _safe, _silent)
 end
 return {
   is_union = is_union,
-  is_generic = is_generic,
+  is_constraint = is_constraint,
   binarize = binarize,
   rbinarize = rbinarize,
   compare = compare
