@@ -176,7 +176,7 @@ apply_arguments = (argl) =>
 
 sign = (signature) -> setmetatable {
   _signature: signature
-  _tree:      binarize signature
+  _tree:      rbinarize signature
   _type:      type
   _function:  ->
   safe:       false
