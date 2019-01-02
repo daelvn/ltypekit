@@ -1,7 +1,7 @@
-local binarize, compare
+local binarize, compare, rbinarize
 do
   local _obj_0 = require("ltypekit.signature")
-  binarize, compare = _obj_0.binarize, _obj_0.compare
+  binarize, compare, rbinarize = _obj_0.binarize, _obj_0.compare, _obj_0.rbinarize
 end
 local type
 type = require("ltypekit.type").type
@@ -221,7 +221,7 @@ end
 sign = function(signature)
   return setmetatable({
     _signature = signature,
-    _tree = binarize(signature),
+    _tree = rbinarize(signature),
     _type = type,
     _function = function() end,
     safe = false,

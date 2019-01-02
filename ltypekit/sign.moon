@@ -2,9 +2,9 @@
 -- By daelvn
 -- Signed functions as a unified type
 -- Added generic support
-import binarize, compare   from require "ltypekit.signature"
-import type                from require "ltypekit.type"
-import warn, die, contains from require "ltypekit.util"
+import binarize, compare, rbinarize from require "ltypekit.signature"
+import type                         from require "ltypekit.type"
+import warn, die, contains          from require "ltypekit.util"
 
 local sign
 
