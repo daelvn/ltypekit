@@ -78,11 +78,9 @@ end)
 local numToDigit = (sign("number -> char"))(function(c)
   return Char(tostring(c))
 end)
-local CharT
-local CharL = {
+return {
   char_resolver = char_resolver,
   Char = Char,
-  CharT = CharT,
   isChar = isChar,
   isControl = isControl,
   isSpace = isSpace,
@@ -101,10 +99,3 @@ local CharL = {
   digitToNum = digitToNum,
   numToDigit = numToDigit
 }
-CharT = {
-  resolver = char_resolver,
-  type = "char",
-  lib = "CharL"
-}
-typeof:set_library("char", CharL)
-return CharL

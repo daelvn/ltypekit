@@ -16,7 +16,7 @@ local is_io
 is_io = function(val)
   return (io.type(val)) and "io" or false
 end
-local type = setmetatable({
+local typeof = setmetatable({
   resolvers = {
     has_meta,
     is_io
@@ -32,7 +32,6 @@ local type = setmetatable({
     "signed",
     "signed_constructor"
   },
-  libraries = { },
   resolve = function(val, resolvers)
     for rname, resolver in pairs(resolvers) do
       local val_type = resolver(val)
@@ -43,12 +42,6 @@ local type = setmetatable({
     local val_type = type_(val)
     return val_type or false
   end,
-  add_resolver = function(self, resolver)
-    return table.insert(self.resolvers, resolver)
-  end,
-  add_allowed = function(self, allowed)
-    return table.insert(self.types, allowed)
-  end,
   add_types = function(self, typel, resolver)
     table.insert(self.resolvers, resolver)
     for _index_0 = 1, #typel do
@@ -56,28 +49,9 @@ local type = setmetatable({
       table.insert(self.types, allowed)
     end
   end,
-  add = function(self, xtype, resolver, lib)
+  add = function(self, xtype, resolver)
     table.insert(self.resolvers, resolver)
-    table.insert(self.types, xtype)
-    self.libraries[exported.type] = lib
-  end,
-  export = function(self, xtype, resolver)
-    return {
-      resolver = resolver,
-      type = xtype,
-      lib = (self.libraries[xtype] or { })
-    }
-  end,
-  import = function(self, exported)
-    table.insert(self.resolvers, exported.resolver)
-    table.insert(self.types, exported.type)
-    self.libraries[exported.type] = exported.lib
-  end,
-  set_library = function(self, xtype, lib)
-    self.libraries[xtype] = lib
-  end,
-  libfor = function(self, xtype)
-    return self.libraries[xtype]
+    return table.insert(self.types, xtype)
   end,
   resolves = function(self, xtype)
     local _list_0 = self.types
@@ -94,7 +68,7 @@ local type = setmetatable({
     return self.resolve(val, self.resolvers)
   end
 })
-local typeof = type
+local type = typeof
 local typeforall
 typeforall = function(t)
   local name = type(t[1])
@@ -112,13 +86,8 @@ typeforall = function(t)
     return false
   end
 end
-local libfor
-libfor = function(xtype)
-  return typeof:libfor(xtype)
-end
 return {
   type = type,
   typeof = typeof,
-  typeforall = typeforall,
-  libfor = libfor
+  typeforall = typeforall
 }
