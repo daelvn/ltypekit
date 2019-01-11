@@ -33,6 +33,7 @@ typeof = setmetatable {
     table.insert @resolvers, resolver
     for allowed in *typel do table.insert @types, allowed
   add:          (xtype, resolver) =>
+    print "adding type #{xtype}"
     table.insert @resolvers, resolver
     table.insert @types,     xtype
 

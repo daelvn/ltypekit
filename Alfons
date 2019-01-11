@@ -1,3 +1,9 @@
 -- alfons: moon
-export clean   ==> os.execute "rm -r **/*.lua *.lua"
-export compile ==> os.execute "moonc ."
+export clean   ==>
+  os.execute "rm -r **/*.lua *.lua"
+  os.execute "rm -r ltypekit/*.moon"
+  os.execute "rm -r ltypekit/*/*.moon"
+export compile ==>
+  os.execute "msmx ltypekit/*.msmx"
+  os.execute "msmx ltypekit/*/*.msmx"
+  os.execute "moonc ."

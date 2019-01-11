@@ -1,4 +1,4 @@
--- ltypekit | 15.12.2018
+-- ltypekit | 16.12.2018
 -- By daelvn
 -- Signature parsing and comparison
 import die, warn from require "ltypekit.util"
