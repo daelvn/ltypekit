@@ -465,14 +465,10 @@ compare = (a, b) ->
           -- Equivalent types
           continue
         elseif (xa\match"^%u" and xb\match "^%l") or
-               (xa\match"^%l" and xb\match "^%u")
-          -- Type + unconstrained variable
+               (xa\match"^%l" and xb\match "^%u") or
+               (xa\match"^%l" and xb\match "^%l")
+          -- Unconstrained variables
           continue
-        elseif (xa\match"^%l" and xb\match "^%l")
-          -- unconstrained variables
-          continue
-        -- TODO implement typefor (type synonyms)
-        -- TODO typefor, typeforall, data, typedef, typeclass, instance, derive...
         elseif (typefor xa) == (typefor xb)
           -- Type synonyms match
           continue
@@ -521,6 +517,3 @@ compare = (a, b) ->
           unless has_common
             return false
       elseif (is_sngl xa) and (is_sngl xb)
-
-
-
