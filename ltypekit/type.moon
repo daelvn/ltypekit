@@ -77,7 +77,7 @@ typeof = setmetatable {
 
 --> # typeE
 --> Creates a type template using a name and an annotation
-typeE = (name="?", annotation="") -> {:name, annotation: "#{name} #{annotation}"}
+typeE = (name="?", annotation="") -> {:name, annotation: "#{name}#{annotation and " #{annotation}" or ""}"}
 
 --> # wrapConstructor
 --> Wraps a constructor to support type annotations and argument checking
@@ -90,7 +90,7 @@ wrapConstructor = (T, cons, annot) ->
       dieA {:T}, "Number of arguments in annotation does not match. Expected #{#types}, got #{#argl}"
     for i=1,#argl
       if argl[i] != types[i]
-        dieA {:T} "Unmatching types in annotation. Expected #{types[i]}, got #{argl[i]}"
+        dieA {:T}, "Unmatching types in annotation. Expected #{types[i]}, got #{argl[i]}"
     cons ...
 
 --> # data
