@@ -2,9 +2,13 @@
 -- By daelvn
 -- Signature parsing and comparison
 import die, warn from require "ltypekit.util"
-import typefor   from require "ltypekit.signature7"
 import printi    from require "ltext"
 inspect = require "inspect"
+
+_DEBUG = false
+
+printfi = printi
+printi  = (...) -> if _DEBUG then printfi ...
 
 local *
 
@@ -425,12 +429,13 @@ rbinarize = (sig, const) ->
       if tree.out[i] ==    ""    then table.remove tree.out, i
   tree
 
---printi parse_declaration "a"
---printi parse_constraint  "Num a, |Int,Double| a"
---printi unify_constraints (parse_constraint "Num a, Int a, |Int,Double| a").a
---printi binarize "Num a => a"
---printi binarize  "Num a, Int b => [a] -> b -> b"
---printi rbinarize "a, b => [a] -> b -> b"
---printi rbinarize "* a, * b => (a => [a] -> a) -> b"
+printfi parse_declaration "a"
+printfi parse_constraint  "Num a, |Int,Double| a"
+printfi unify_constraints (parse_constraint "Num a, Int a, |Int,Double| a").a
+printfi binarize "Num a => a"
+printfi binarize  "Num a, Int b => [a] -> b -> b"
+printfi rbinarize "a, b => [a] -> b -> b"
+printfi rbinarize "* a, * b => (a => [a] -> a) -> b"
+printfi rbinarize "* a, * b => ([a] -> a) -> b"
 
 -- compare: compares two signatures

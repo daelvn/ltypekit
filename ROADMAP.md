@@ -1,6 +1,5 @@
 #ltypekit Roadmap for v7
 - Constraints using => instead of {}
-- Signature overloading?
 - Lists: `[string]`
 - Hashmaps: `{number:string}`
 - Scopes & RankNTypes
