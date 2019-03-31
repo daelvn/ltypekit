@@ -6,7 +6,12 @@
 inspect = require "inspect"
 ts      = require "tableshape"
 --
-insert = (t) -> (v) -> table.insert t, v
+inspectAST = (...) -> print inspect ...
+--
+insert   = (t) -> (v) -> table.insert t, v
+pack     = (...)      -> {...}
+map      = (f) -> (t) -> [f v for v in *t]
+unpack or= table.unpack
 
 --> # Tableshape shortcuts
 T = ts.types
@@ -31,6 +36,7 @@ prepare = (sig) ->
 inspectStream = (tokenStream) ->
   for token in *tokenStream
     print token[1], token[2]\gsub " ", "_"
+
 --> ## Token constructors
 --> Functions to have an easier to read token constructing syntax.
 Ref         = (tag) -> { "ref", tag } if tag\match "%S"
@@ -39,6 +45,7 @@ Constraint  = { "con", "=>" }
 Parenthesis = (tag) -> { "par", tag }
 List        = (tag) -> { "lst", tag }
 Separator   = (tag) -> { "sep", tag }
+
 --> ## tokenize
 --> Tokenizer function
 tokenize = (sig) ->
@@ -113,19 +120,22 @@ expectToken = (tokenStream) -> (expected) ->
 
 --> # AST creation
 --> Functions to form an AST
+
 --> ## Node creation
 --> Create table nodes to build an AST
-NTypeAtom = (ref) -> {"ref", ref}
-NTypeList = (app) -> {"lst", app}
--- TODO NTypeTuple, NTypeApplication, NType
+NTypeAtom        = (...)  -> pack "atom", ...
+NTypeApplication = (head) -> (atom) -> { "app", head, atom }
+NType            = (left) -> (arrow) -> (right) -> {__context: "inherit", __arrow: arrow, "type", left, right }
+
 --> ## Shape creation
 --> Create tableshapes to match the AST
-STypeAtom = (ref) -> S { "ref", (beginUpper ref) and ref or beginLower }
--- TODO Does this really work?
-STypeList = (app) -> S { "lst", app }
--- TODO STypeTuple, STypeApplication, SType
+STypeAtom        = (...)  -> S pack "atom", unpack (map (ref) -> ((type ref) == "string") and ((beginUpper ref) and ref or beginLower) or ref) {...}
+STypeApplication = (head) -> (atom) -> S { "app", head, atom }
+SType            = (left) -> (arrow) -> (right) -> S { __context: T.one_of {"inherit", T.array_of T.string}, __arrow: arrow, "type", left, right }
+
 --> # Parsing
 --> Creating an AST out of the token stream. 
+
 --> ## parse
 --> Parsing function
 parse = (tokenStream) ->
@@ -136,53 +146,76 @@ parse = (tokenStream) ->
   --> ```bnf
   --> TypeAtom        ::= ref
   -->                   | "(" Type ")"
-  --> TypeList        ::= "[" TypeApplication "]"
-  --> TypeTuple       ::= "(" TypeApplication ["," TypeApplication ]* ")"
-  --> TypeApplication ::= TypeAtom (TypeAtom)*
+  -->                   | "[" TypeApplication "]"
+  -->                   | "(" TypeApplication "," TypeApplication {"," TypeApplication} ")"
+  --> TypeApplication ::= TypeAtom {TypeAtom}
   --> Type            ::= TypeApplication
   -->                   | TypeApplication "=>" TypeApplication
   -->                   | TypeApplication "->" TypeApplication
   --> ```
-  local TypeAtom, TypeList, TypeTuple, TypeApplication, Type
+  local TypeAtom, TypeApplication, Type
   --> #### TypeAtom
   TypeAtom = ->
     if consume Parenthesis "("
-      t = Type!
-      expect Parenthesis ")"
-      t
+      {:n, :s} = Type!
+      if n[1] == "type"
+        expect Parenthesis ")"
+        return n, s
+      elseif n[1] == "app"
+        expect Separator ","
+        node   = {{TypeApplication!}}
+        append = (insert node)
+        while true
+          if consume Separator ","
+            append {TypeApplication!}
+          else break
+        return {
+          n: NTypeAtom unpack node
+          s: STypeAtom unpack
+        }
+    elseif consume List "["
+      {:n, :s} = TypeApplication!
+      expect List "]"
+      return {:n, :s}
     else
-      return
-        (NTypeAtom expect {"ref"}),
-        (STypeAtom expect {"ref"})
-  --> #### TypeList
-  TypeList = ->
-    expect List "["
-    ta = TypeApplication!
-    expect List "]"
-    return
-      (NTypeList ta)
-      (STypeList ta)
-  --> #### TypeTuple
-  TypeTuple = ->
-    expect Parenthesis "("
-    ta = TypeApplication!
-    -- TODO This is totally wrong and just done so it compiles
-    return if consume Separator ","
+      return {
+        n: NTypeAtom expect {"ref"}
+        s: STypeAtom expect {"ref"}
+      }
   --> #### TypeApplication
   TypeApplication = ->
     head  = TypeAtom!
     token = next!
-    while (token[1] == "ref") or ((token[1] == "par") and (token[2] == ")"))
-      -- TODO Where does STypeApplication come in?
-      head = NTypeApplication {head, TypeAtom!}
-    return head
-  -- TODO Type
+    while token[1] == "ref" or token[2] == "("
+      head.n = (NTypeApplication head.n) token.n
+      head.s = (STypeApplication head.s) token.s
+    return head.n, head.s
+  --> #### Type
+  Type = ->
+    left  = TypeApplication!
+    token = next!
+    if token[2] == "->"
+      right = TypeApplication!
+      return {
+        n: ((NType left) "->") right
+        s: ((SType left) "->") right
+      }
+    elseif token[2] == "=>"
+      right = TypeApplication!
+      return {
+        n: ((NType left) "=>") right
+        s: ((SType left) "=>") right
+      }
+    else
+      left
 
-
-  --
+  Type!
 
 --inspectStream tokenize "a -> (b -> c)"
 --print!
 inspectStream tokenize "Ord a => a -> (a -> Bool) -> Bool"
 --print!
 --inspectStream tokenize "Ord a -> Ord a -> Bool"
+{:n, :s} = parse "a -> b"
+inspectAST n
+inspectAST s

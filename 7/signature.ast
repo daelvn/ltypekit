@@ -1,0 +1,8 @@
+TypeAtom         ::= ref
+                   | "(" Type ")"
+                   | "[" TypeApplication "]"
+                   | "(" TypeApplication "," TypeApplication {"," TypeApplication} ")"
+TypeApplications ::= TypeAtom {TypeAtom}
+Type             ::= TypeApplication
+                   | TypeApplication "->" TypeApplication
+                   | TypeApplication "=>" TypeApplication

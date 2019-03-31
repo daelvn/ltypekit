@@ -1,5 +1,7 @@
 --> # ltypekit
 --> Advanced type checking library for Lua.
+--> ## ltypekit/type
+--> `typeof` function provider and generic type resolvers.
 -- ltypekit.7/type
 -- By daelvn
 -- 01.03.2019
@@ -41,6 +43,14 @@ isNative = nativeIsX { "number", "string", "function", "thread", "nil", "userdat
 --> ## isString
 --> Checks that the value passed is a string.
 isString = nativeIsX "string"
+--> ## isTable
+--> Checks that the value passed is a table.
+isTable = nativeIsX "table"
+--> ## isCallable
+--> Checks that the value passed is callable
+isCallable = (v) ->
+  ((nativeIsX "function") v) or
+  (getmetatable v).__call
 
 --> # Resolvers
 --> Resolvers are functions which take in any value and return a string value depending on whether it can resolve the
@@ -117,6 +127,6 @@ typeforany = (t) ->
 
 --> Return
 { :typeof, :typeforall, :typeforany
-  :isX, :nativeIsX, :isNative, :isString
+  :isX, :nativeIsX, :isNative, :isString, :isTable, :isCallable
   :hasMeta, :isIO
   :addResolver }
