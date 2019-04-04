@@ -3,6 +3,8 @@
 -- ltypekit.7/type
 -- By daelvn
 -- 01.03.2018
+io.stdout\setvbuf "no"
+
 inspect = require "inspect"
 ts      = require "tableshape"
 --
@@ -99,13 +101,14 @@ tokenize = (sig) ->
 --> Functions to access, consume and expect tokens.
 --> ## nextToken
 --> Returns the next, non-consumed token
-nextToken = (tokenStream) -> -> tokenStream[tokenStream.pointer]
+nextToken = (tokenStream) -> -> tokenStream[tokenStream.pointer] or print inspect { :tokenStream, type: type tokenStream }
 --> ## consume
 --> Consumes a token
 consumeToken = (tokenStream) -> (ask) ->
   token = (nextToken tokenStream)!
   if token[1] == ask[1] and token[2] == (ask[2] or token[2])
     tokenStream.pointer += 1
+    print "consume #{inspect token}"
     token
   false
 --> ## expect
@@ -114,9 +117,10 @@ expectToken = (tokenStream) -> (expected) ->
   token = (nextToken tokenStream)!
   if token[1] == expected[1] and token[2] == (expected[2] or token[2])
     tokenStream.pointer += 1
+    print "expect #{inspect expected} - get #{inspect token}"
     token
   else
-    error "expect :: Expected '#{expected}', got '#{token[1]}' (value '#{token[2]}' at token #{tokenStream.pointer})"
+    error "expect :: Expected '#{inspect expected}', got '#{inspect token}' (at token #{tokenStream.pointer})"
 
 --> # AST creation
 --> Functions to form an AST
@@ -156,51 +160,67 @@ parse = (tokenStream) ->
   local TypeAtom, TypeApplication, Type
   --> #### TypeAtom
   TypeAtom = ->
-    if consume Parenthesis "("
+    print "TypeAtom"
+    if consume {Parenthesis "("}
       {:n, :s} = Type!
       if n[1] == "type"
-        expect Parenthesis ")"
+        expect {Parenthesis ")"}
         return n, s
       elseif n[1] == "app"
-        expect Separator ","
+        expect {Separator ","}
+        print "-> TypeApplication"
         node   = {{TypeApplication!}}
         append = (insert node)
         while true
-          if consume Separator ","
+          if consume {Separator ","}
+            print "-> TypeApplication"
             append {TypeApplication!}
           else break
         return {
           n: NTypeAtom unpack node
           s: STypeAtom unpack
         }
-    elseif consume List "["
+    elseif consume {List "["}
+      print "-> TypeApplication"
       {:n, :s} = TypeApplication!
-      expect List "]"
+      expect {List "]"}
       return {:n, :s}
     else
+      r = expect {"ref"}
       return {
-        n: NTypeAtom expect {"ref"}
-        s: STypeAtom expect {"ref"}
+        n: NTypeAtom r
+        s: STypeAtom r
       }
   --> #### TypeApplication
   TypeApplication = ->
+    print "TypeApplication"
+    print "-> TypeAtom"
     head  = TypeAtom!
+    print "-> token"
     token = next!
+    print inspect token
     while token[1] == "ref" or token[2] == "("
       head.n = (NTypeApplication head.n) token.n
       head.s = (STypeApplication head.s) token.s
     return head.n, head.s
   --> #### Type
   Type = ->
+    print "Type"
+    print "-> TypeApplication"
     left  = TypeApplication!
+    print "<- Type"
+    print "-> token"
     token = next!
+    print inspect token
     if token[2] == "->"
+      print "-> TypeApplication"
       right = TypeApplication!
       return {
         n: ((NType left) "->") right
         s: ((SType left) "->") right
       }
     elseif token[2] == "=>"
+      print "-> TypeApplication"
       right = TypeApplication!
       return {
         n: ((NType left) "=>") right
@@ -213,9 +233,10 @@ parse = (tokenStream) ->
 
 --inspectStream tokenize "a -> (b -> c)"
 --print!
-inspectStream tokenize "Ord a => a -> (a -> Bool) -> Bool"
+--inspectStream tokenize "Ord a => a -> (a -> Bool) -> Bool"
 --print!
 --inspectStream tokenize "Ord a -> Ord a -> Bool"
-{:n, :s} = parse "a -> b"
+inspectStream tokenize "a -> b"
+{:n, :s} = parse tokenize "a -> b"
 inspectAST n
 inspectAST s
